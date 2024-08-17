@@ -3,7 +3,7 @@ use pyo3::types::PyBytes;
 use std::path::PathBuf;
 
 use crate::errors::WalletError;
-use crate::keypair::Keypair;
+use crate::keypair::{ColdKeyPair, HotKeyPair, KeyPair};
 use crate::wallet::Wallet;
 use pyo3::exceptions::{PyException, PyValueError};
 use sp_core::crypto::Ss58Codec;
@@ -12,7 +12,8 @@ use sp_core::crypto::Ss58Codec;
 #[pymodule]
 fn bittensor_wallet(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyWallet>()?;
-    m.add_class::<PyKeypair>()?;
+    m.add_class::<PyColdKeyPair>()?;
+    m.add_class::<PyHotKeyPair>()?;
     Ok(())
 }
 
@@ -27,70 +28,40 @@ impl PyWallet {
     #[new]
     fn new(name: &str, path: &str) -> Self {
         PyWallet {
-            wallet: Wallet::new(name, PathBuf::from(path)),
+            wallet: Wallet::new(name.to_string(), PathBuf::from(path)),
         }
     }
 
-    /// Creates a new wallet with the specified number of words and password.
-    fn create_new_wallet(&mut self, n_words: u32, password: &str) -> PyResult<()> {
+    /// Creates a new wallet with the specified password.
+    fn create_new_wallet(&mut self, password: &str) -> PyResult<()> {
         self.wallet
-            .create_new_wallet(n_words, password)
+            .create_new_wallet(password)
             .map_err(wallet_error_to_pyerr)
     }
 
-    /// Creates a new hotkey with the specified name and password.
-    fn create_new_hotkey(&mut self, name: &str, password: &str) -> PyResult<()> {
+    /// Creates a new hotkey with the specified name.
+    fn create_new_hotkey(&mut self, name: &str) -> PyResult<()> {
         self.wallet
-            .create_new_hotkey(name, password)
-            .map_err(wallet_error_to_pyerr)
-    }
-
-    /// Sets the active hotkey by name.
-    fn set_active_hotkey(&mut self, name: &str) -> PyResult<()> {
-        self.wallet
-            .set_active_hotkey(name)
+            .create_new_hotkey(name)
             .map_err(wallet_error_to_pyerr)
     }
 
     /// Retrieves the coldkey's public key.
-    ///
-    /// This function attempts to retrieve the coldkey's public key from the wallet.
-    /// It requires the correct password to decrypt the coldkey.
-    ///
-    /// # Arguments
-    ///
-    /// * `py` - The Python interpreter's context.
-    /// * `password` - A string slice containing the password to decrypt the coldkey.
-    ///
-    /// # Returns
-    ///
-    /// * `PyResult<&'py PyBytes>` - On success, returns the public key as PyBytes.
-    ///                              On failure, returns a Python exception.
-    ///
-    /// ```
     fn get_coldkey<'py>(&self, py: Python<'py>, password: &str) -> PyResult<&'py PyBytes> {
         match self.wallet.get_coldkey(password) {
-            Ok(public_key) => {
-                // Convert the public key to bytes
-                let key_bytes = public_key.to_vec();
+            Ok(coldkey) => {
+                let key_bytes = coldkey.public.to_vec();
                 Ok(PyBytes::new(py, &key_bytes))
             }
             Err(error) => Err(PyValueError::new_err(error.to_string())),
         }
     }
 
-    // fn get_coldkey_ss58(&self) -> PyResult<String> {
-    //     match self.wallet.get_coldkey_ss58() {
-    //         Ok(ss58) => Ok(ss58),
-    //         Err(error) => Err(PyValueError::new_err(error.to_string())),
-    //     }
-    // }
-
-    /// Retrieves the active hotkey.
-    fn get_active_hotkey<'py>(&self, py: Python<'py>, password: &str) -> PyResult<&'py PyBytes> {
-        match self.wallet.get_active_hotkey(password) {
-            Ok(keypair) => {
-                let key_bytes = keypair.public.to_vec();
+    /// Retrieves a hotkey.
+    fn get_hotkey<'py>(&self, py: Python<'py>, name: &str) -> PyResult<&'py PyBytes> {
+        match self.wallet.get_hotkey(name) {
+            Ok(hotkey) => {
+                let key_bytes = hotkey.public.to_vec();
                 Ok(PyBytes::new(py, &key_bytes))
             }
             Err(error) => Err(PyValueError::new_err(error.to_string())),
@@ -105,6 +76,23 @@ impl PyWallet {
     }
 
     /// Changes the password of the wallet.
+    ///
+    /// # Arguments
+    ///
+    /// * `py` - The Python interpreter.
+    /// * `old_password` - The current password of the wallet.
+    /// * `new_password` - The new password to set for the wallet.
+    ///
+    /// # Returns
+    ///
+    /// * `PyResult<&'py PyAny>` - A Python future representing the asynchronous operation.
+    ///
+    /// # Example
+    ///
+    /// ```python
+    /// wallet = PyWallet("my_wallet", "/path/to/wallet")
+    /// await wallet.change_password("old_password", "new_password")
+    /// ```
     #[pyo3(name = "change_password")]
     fn py_change_password<'py>(
         &mut self,
@@ -112,10 +100,14 @@ impl PyWallet {
         old_password: &str,
         new_password: &str,
     ) -> PyResult<&'py PyAny> {
-        let mut wallet = self.wallet.clone();
-        let old_password = old_password.to_string();
-        let new_password = new_password.to_string();
+        // Clone the wallet to move it into the async closure
+        let wallet = self.wallet.clone();
 
+        // Convert passwords to owned String to move into the async closure
+        let old_password: String = old_password.to_string();
+        let new_password: String = new_password.to_string();
+
+        // Convert the Rust Future into a Python Future
         pyo3_asyncio::tokio::future_into_py(py, async move {
             wallet
                 .change_password(&old_password, &new_password)
@@ -138,50 +130,174 @@ impl PyWallet {
             .map_err(wallet_error_to_pyerr)
     }
 
-    /// Updates the encrypted private key for a specific hotkey.
-    fn update_hotkey_encryption(&mut self, name: &str, encrypted_private: Vec<u8>) -> PyResult<()> {
-        self.wallet
-            .update_hotkey_encryption(name, &encrypted_private)
-            .map_err(wallet_error_to_pyerr)
+    /// Signs a message with the coldkey
+    ///
+    /// # Arguments
+    ///
+    /// * `py` - Python interpreter state
+    /// * `message` - The message to sign as a byte slice
+    /// * `password` - The password to decrypt the coldkey
+    ///
+    /// # Returns
+    ///
+    /// * `PyResult<&'py PyBytes>` - The signature as Python bytes if successful, or a Python error
+    ///
+    fn sign_with_coldkey<'py>(
+        &self,
+        py: Python<'py>,
+        message: &[u8],
+        password: &str,
+    ) -> PyResult<&'py PyBytes> {
+        match self.wallet.sign_with_coldkey(message, password) {
+            Ok(signature) => Ok(PyBytes::new(py, &signature)),
+            Err(error) => Err(PyValueError::new_err(error.to_string())),
+        }
     }
 
-    /// Fetches the balance for the wallet.
-    fn fetch_balance<'py>(&mut self, py: Python<'py>) -> PyResult<&'py PyAny> {
-        let mut wallet = self.wallet.clone();
-        pyo3_asyncio::tokio::future_into_py(py, async move {
-            wallet.fetch_balance().await.map_err(wallet_error_to_pyerr)
-        })
+    /// Signs a message with a hotkey
+    ///
+    /// # Arguments
+    ///
+    /// * `py` - Python interpreter state
+    /// * `name` - The name of the hotkey to use for signing
+    /// * `message` - The message to sign as a byte slice
+    ///
+    /// # Returns
+    ///
+    /// * `PyResult<&'py PyBytes>` - The signature as Python bytes if successful, or a Python error
+    ///
+    /// # Example
+    ///
+    /// ```python
+    /// wallet = PyWallet("my_wallet", "/path/to/wallet")
+    /// signature = wallet.sign_with_hotkey("my_hotkey", b"message to sign")
+    /// ```
+    fn sign_with_hotkey<'py>(
+        &self,
+        py: Python<'py>,
+        name: &str,
+        message: &[u8],
+    ) -> PyResult<&'py PyBytes> {
+        match self.wallet.sign_with_hotkey(name, message) {
+            Ok(signature) => Ok(PyBytes::new(py, &signature)),
+            Err(error) => Err(PyValueError::new_err(error.to_string())),
+        }
     }
 }
 
-/// Python wrapper for the Keypair struct
+/// Python wrapper for the ColdKeyPair struct
 #[pyclass]
-struct PyKeypair {
-    keypair: Keypair,
+struct PyColdKeyPair {
+    coldkeypair: ColdKeyPair,
 }
 
 #[pymethods]
-impl PyKeypair {
-    fn sign(&self, message: &[u8], password: &str) -> PyResult<Vec<u8>> {
-        self.keypair
-            .sign(message, password)
-            .map(|sig| sig.0.to_vec())
-            .map_err(wallet_error_to_pyerr)
+impl PyColdKeyPair {
+    /// Creates a new PyColdKeyPair instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `public` - A vector of bytes representing the public key.
+    /// * `encrypted_private` - A vector of bytes representing the encrypted private key.
+    ///
+    /// # Returns
+    ///
+    /// * `PyResult<Self>` - A new PyColdKeyPair instance if successful, or a PyValueError if the public key is invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```python
+    /// public_key = b'\x12\x34\x56...'  # 32 bytes
+    /// encrypted_private = b'\x78\x90\xAB...'  # Encrypted private key
+    /// cold_key_pair = PyColdKeyPair(public_key, encrypted_private)
+    /// ```
+    #[new]
+    fn new(public: Vec<u8>, encrypted_private: Vec<u8>) -> PyResult<Self> {
+        let public_key = sp_core::sr25519::Public::try_from(&public[..])
+            .map_err(|_| PyValueError::new_err("Invalid public key"))?;
+        Ok(PyColdKeyPair {
+            coldkeypair: ColdKeyPair::new(public_key, encrypted_private),
+        })
+    }
+
+    #[staticmethod]
+    fn generate() -> Self {
+        PyColdKeyPair {
+            coldkeypair: ColdKeyPair::generate(),
+        }
+    }
+
+    #[staticmethod]
+    fn from_mnemonic(mnemonic: &str, password: Option<&str>) -> PyResult<Self> {
+        ColdKeyPair::from_mnemonic(mnemonic, password)
+            .map(|coldkeypair| PyColdKeyPair { coldkeypair })
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+
+    fn encrypt(&self, password: &str) -> PyResult<Vec<u8>> {
+        self.coldkeypair
+            .encrypt(password)
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+
+    fn decrypt(&self, password: &str) -> PyResult<Vec<u8>> {
+        self.coldkeypair
+            .decrypt(password)
+            .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
     fn public_key(&self) -> Vec<u8> {
-        self.keypair.public.to_vec()
+        self.coldkeypair.public.to_vec()
     }
 
     fn ss58_address(&self) -> String {
-        // Convert the public key to an SS58 address
-        self.keypair.public.to_ss58check()
+        self.coldkeypair.public.to_ss58check()
     }
 }
 
-impl From<Keypair> for PyKeypair {
-    fn from(keypair: Keypair) -> Self {
-        PyKeypair { keypair }
+/// Python wrapper for the HotKeyPair struct
+#[pyclass]
+struct PyHotKeyPair {
+    hotkeypair: HotKeyPair,
+}
+
+#[pymethods]
+impl PyHotKeyPair {
+    #[new]
+    fn new(public: Vec<u8>, private: Vec<u8>) -> PyResult<Self> {
+        let public_key = sp_core::sr25519::Public::try_from(&public[..])
+            .map_err(|_| PyValueError::new_err("Invalid public key"))?;
+        Ok(PyHotKeyPair {
+            hotkeypair: HotKeyPair::new(public_key, private),
+        })
+    }
+
+    #[staticmethod]
+    fn generate() -> Self {
+        PyHotKeyPair {
+            hotkeypair: HotKeyPair::generate(),
+        }
+    }
+
+    fn public_key(&self) -> Vec<u8> {
+        self.hotkeypair.public.to_vec()
+    }
+
+    fn ss58_address(&self) -> String {
+        self.hotkeypair.public.to_ss58check()
+    }
+
+    fn sign<'py>(&self, py: Python<'py>, message: &[u8]) -> PyResult<&'py PyBytes> {
+        let signature = self.hotkeypair.sign(message);
+        Ok(PyBytes::new(py, &signature.0))
+    }
+
+    fn to_mnemonic(&self) -> String {
+        self.hotkeypair.to_mnemonic()
+    }
+
+    fn to_seed(&self) -> Vec<u8> {
+        self.hotkeypair.to_seed()
     }
 }
 

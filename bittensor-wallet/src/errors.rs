@@ -30,8 +30,8 @@ pub enum WalletError {
     InvalidSeed,
     #[error("Encryption error")]
     EncryptionError,
-    #[error("Decryption error")]
-    DecryptionError,
+    #[error("Decryption error: {0}")]
+    DecryptionError(String),
     #[error("Mnemonic error")]
     MnemonicError,
     #[error("Decode error")]
@@ -102,6 +102,12 @@ pub enum WalletError {
     KeyGenerationError,
     #[error("Public key error")]
     PublicKeyError,
+    #[error("Invalid public key")]
+    InvalidPublicKey,
+    #[error("Missing private key")]
+    MissingPrivateKey,
+    #[error("Hex decode error: {0}")]
+    HexDecodeError(String),
 }
 
 impl From<EncodeError> for WalletError {
