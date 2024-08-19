@@ -1,7 +1,13 @@
 [package]
 name = "bittensor-wallet"
 version = "0.1.0"
-edition = "2021"
+authors = ["Samuel Dare <samuel.dare@gmail.com>"]
+description = "A wallet implementation for the Bittensor network"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/distributedstatemachine/bittensor-rs"
+readme = "README.md"
+keywords = ["bittensor", "wallet", "cryptocurrency"]
+categories = ["cryptography::cryptocurrencies"]
 
 [lib]
 name = "bittensor_wallet"
