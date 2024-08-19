@@ -8,6 +8,7 @@ repository = "https://github.com/distributedstatemachine/bittensor-rs"
 readme = "README.md"
 keywords = ["bittensor", "wallet", "cryptocurrency"]
 categories = ["cryptography::cryptocurrencies"]
+edition = "2021"
 
 [lib]
 name = "bittensor_wallet"
