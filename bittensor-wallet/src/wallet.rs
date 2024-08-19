@@ -35,13 +35,16 @@ pub struct Wallet {
 }
 
 impl Wallet {
-    pub fn new(name: String, path: PathBuf) -> Self {
-        Wallet {
+    pub fn new(name: String, path: PathBuf) -> Result<Self, WalletError> {
+        // Create the directory if it doesn't exist
+        std::fs::create_dir_all(&path).map_err(WalletError::IoError)?;
+
+        Ok(Wallet {
             name,
             path,
             coldkey: None,
             hotkeys: HashMap::new(),
-        }
+        })
     }
     /// Creates a new wallet with a coldkey.
     ///
@@ -78,12 +81,19 @@ impl Wallet {
         let coldkey_pub_path: PathBuf = self.path.join("coldkeypub.txt");
         let coldkey_pub_json: String = serde_json::to_string_pretty(&coldkey_pub)
             .map_err(|e| WalletError::SerializationError(e.to_string()))?;
-        std::fs::write(&coldkey_pub_path, coldkey_pub_json).map_err(WalletError::IoError)?;
+        std::fs::write(&coldkey_pub_path, &coldkey_pub_json)
+            .map_err(|e| WalletError::IoError(e))?;
+        println!("Wrote coldkeypub.txt to {:?}", coldkey_pub_path);
 
         // Encrypt and write the coldkey to a file
-        let encrypted_coldkey: Vec<u8> = coldkey.encrypt(password)?;
+        let encrypted_coldkey = coldkey
+            .encrypt(password)
+            .map_err(|e| WalletError::EncryptionError(e.to_string()))?;
         let coldkey_path: PathBuf = self.path.join("coldkey");
-        std::fs::write(&coldkey_path, encrypted_coldkey).map_err(WalletError::IoError)?;
+        let encrypted_data: String = serde_json::to_string(&encrypted_coldkey)
+            .map_err(|e| WalletError::SerializationError(e.to_string()))?;
+        std::fs::write(&coldkey_path, &encrypted_data).map_err(|e| WalletError::IoError(e))?;
+        println!("Wrote coldkey to {:?}", coldkey_path);
 
         Ok(())
     }
@@ -112,7 +122,7 @@ impl Wallet {
     ///     Err(e) => eprintln!("Error creating hotkey: {:?}", e),
     /// }
     /// ```
-    pub fn create_new_hotkey(&self, name: &str) -> Result<(), WalletError> {
+    pub fn create_new_hotkey(&mut self, name: &str) -> Result<(), WalletError> {
         // Generate a new HotKeyPair
         let hotkey: HotKeyPair = HotKeyPair::generate();
 
@@ -126,14 +136,18 @@ impl Wallet {
             ss58_address: hotkey.public.to_ss58check(),
         };
 
-        // TODO: Consider implementing a more secure way to handle private keys and secret phrases
-        // NOTE: The current implementation stores sensitive information in plain text
+        // Create the hotkeys directory if it doesn't exist
+        let hotkeys_dir: PathBuf = self.path.join("hotkeys");
+        std::fs::create_dir_all(&hotkeys_dir).map_err(WalletError::IoError)?;
 
         // Serialize and write the hotkey credentials to a file
-        let hotkey_path: PathBuf = self.path.join("hotkeys").join(name);
+        let hotkey_path: PathBuf = hotkeys_dir.join(name);
         let hotkey_json: String = serde_json::to_string_pretty(&hotkey_credentials)
             .map_err(|e| WalletError::SerializationError(e.to_string()))?;
         std::fs::write(&hotkey_path, hotkey_json).map_err(WalletError::IoError)?;
+
+        // Add the hotkey to the wallet's hotkeys HashMap
+        self.hotkeys.insert(name.to_string(), hotkey);
 
         Ok(())
     }
@@ -163,35 +177,38 @@ impl Wallet {
     ///     Err(e) => eprintln!("Error retrieving coldkey: {:?}", e),
     /// }
     /// ```
+    // pub fn get_coldkey(&self, password: &str) -> Result<ColdKeyPair, WalletError> {
+    //     // Read and parse the coldkey public information
+    //     let coldkey_pub_path: std::path::PathBuf = self.path.join("coldkeypub.txt");
+    //     let coldkey_pub_json: String =
+    //         std::fs::read_to_string(&coldkey_pub_path).map_err(WalletError::IoError)?;
+    //     let coldkey_pub: KeyCredentials = serde_json::from_str(&coldkey_pub_json)
+    //         .map_err(|e| WalletError::SerializationError(e.to_string()))?;
+
+    //     // Convert the public key from hex to sr25519::Public
+    //     let public_key =
+    //         sr25519::Public::from_slice(&hex::decode(&coldkey_pub.public_key[2..]).map_err(
+    //             |e| WalletError::DecodingError(format!("Failed to decode public key: {}", e)),
+    //         )?)
+    //         .map_err(|_| WalletError::InvalidPublicKey)?;
+
+    //     // Read the encrypted private key
+    //     let coldkey_path: std::path::PathBuf = self.path.join("coldkey");
+    //     let encrypted_private_key = std::fs::read(&coldkey_path).map_err(WalletError::IoError)?;
+
+    //     // Create and return the ColdKeyPair
+    //     Ok(ColdKeyPair::new(public_key, encrypted_private_key, true))
+    // }
+
     pub fn get_coldkey(&self, password: &str) -> Result<ColdKeyPair, WalletError> {
-        // Read the encrypted coldkey from file
-        let coldkey_path: PathBuf = self.path.join("coldkey");
-        let encrypted_coldkey: Vec<u8> =
-            std::fs::read(&coldkey_path).map_err(WalletError::IoError)?;
-
-        // Read and parse the coldkey public information
-        let coldkey_pub_path: PathBuf = self.path.join("coldkeypub.txt");
-        let coldkey_pub_json: String =
-            std::fs::read_to_string(&coldkey_pub_path).map_err(WalletError::IoError)?;
-        let coldkey_pub: KeyCredentials = serde_json::from_str(&coldkey_pub_json)
-            .map_err(|e| WalletError::SerializationError(e.to_string()))?;
-
-        // Convert the public key from hex to bytes
-        let public: sr25519::Public = sr25519::Public::from_slice(
-            &hex::decode(&coldkey_pub.public_key[2..])
-                .map_err(|e| WalletError::DecodingError(e.to_string()))?,
-        )
-        .map_err(|_| WalletError::InvalidPublicKey)?;
-
-        // Create a new ColdKeyPair
-        let coldkey: ColdKeyPair = ColdKeyPair::new(public, encrypted_coldkey);
-
-        // Verify the password by attempting to decrypt
-        coldkey.decrypt(password)?;
-
-        Ok(coldkey)
+        let coldkey = self.coldkey.as_ref().ok_or(WalletError::NoColdKey)?;
+        let decrypted_private_key: Vec<u8> = coldkey.decrypt(password, &coldkey.public)?;
+        Ok(ColdKeyPair::new(
+            coldkey.public,
+            decrypted_private_key,
+            false,
+        ))
     }
-
     /// Retrieves a HotKeyPair from the wallet by its name.
     ///
     /// # Arguments
@@ -253,19 +270,7 @@ impl Wallet {
     /// * `WalletError::DecodingError` - If there's an issue decoding the hex-encoded keys.
     /// * `WalletError::InvalidPublicKey` - If a public key is invalid.
     ///
-    /// # Example
-    ///
-    /// ```
-    /// let wallet = Wallet::new("my_wallet", PathBuf::from("/path/to/wallet"));
-    /// match wallet.get_hotkeys() {
-    ///     Ok(hotkeys) => {
-    ///         for (name, hotkey) in hotkeys {
-    ///             println!("Hotkey name: {}, Public key: {:?}", name, hotkey.public_key());
-    ///         }
-    ///     },
-    ///     Err(e) => eprintln!("Error retrieving hotkeys: {:?}", e),
-    /// }
-    /// ```
+
     pub fn get_hotkeys(&self) -> Result<HashMap<String, HotKeyPair>, WalletError> {
         let hotkeys_dir: std::path::PathBuf = self.path.join("hotkeys");
         let mut hotkeys: HashMap<String, HotKeyPair> = HashMap::new();
@@ -289,18 +294,50 @@ impl Wallet {
         Ok(hotkeys)
     }
 
+    /// Signs a message using the coldkey.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - A byte slice containing the message to be signed.
+    /// * `password` - The password to unlock the coldkey.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Vec<u8>, WalletError>` - The signature as a vector of bytes if successful, or a WalletError if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * `WalletError` - If the coldkey cannot be retrieved or if the signing operation fails.
+    ///
+
     pub fn sign_with_coldkey(
         &self,
         message: &[u8],
         password: &str,
     ) -> Result<Vec<u8>, WalletError> {
-        let coldkey = self.get_coldkey(password)?;
-        Ok(coldkey.sign(message).0.to_vec())
+        let coldkey: ColdKeyPair = self.get_coldkey(password)?;
+        coldkey.sign(message).map(|signature| signature.to_vec())
     }
 
+    /// Signs a message using a specific hotkey.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the hotkey to use for signing.
+    /// * `message` - A byte slice containing the message to be signed.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Vec<u8>, WalletError>` - The signature as a vector of bytes if successful, or a WalletError if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * `WalletError` - If the hotkey cannot be retrieved or if the signing operation fails.
+    ///
+
     pub fn sign_with_hotkey(&self, name: &str, message: &[u8]) -> Result<Vec<u8>, WalletError> {
-        let hotkey = self.get_hotkey(name)?;
-        Ok(hotkey.sign(message).0.to_vec())
+        let hotkey: HotKeyPair = self.get_hotkey(name)?;
+        hotkey.sign(message).map(|signature| signature.to_vec())
     }
 
     /// Retrieves the SS58-encoded address of the coldkey.
@@ -403,104 +440,6 @@ impl Wallet {
     //     Ok(pair.public())
     // }
 
-    /// Gets the active hotkey as a Keypair.
-    ///
-    /// # Arguments
-    ///
-    /// * `password` - The password to decrypt the mnemonic and encrypt the private key.
-    ///
-    /// # Returns
-    ///
-    /// * `Result<Keypair, WalletError>` - The active hotkey Keypair or an error.
-    // pub fn get_active_hotkey(&self, password: &str) -> Result<Keypair, WalletError> {
-    //     let active_hotkey = self
-    //         .active_hotkey
-    //         .as_ref()
-    //         .ok_or(WalletError::NoActiveHotkey)?;
-
-    //     self.get_hotkey(active_hotkey, password)
-    // }
-
-    /// Gets a hotkey as a Keypair.
-    ///
-    /// # Arguments
-    ///
-    /// * `hotkey_name` - The name of the hotkey to retrieve.
-    /// * `password` - The password to decrypt the mnemonic and encrypt the private key.
-    ///
-    /// # Returns
-    ///
-    /// * `Result<Keypair, WalletError>` - The hotkey Keypair or an error.
-    ///  Gets a hotkey as a Keypair.
-    ///
-    /// # Arguments
-    ///
-    /// * `hotkey_name` - The name of the hotkey to retrieve.
-    /// * `password` - The password to decrypt the mnemonic.
-    ///
-    /// # Returns
-    ///
-    /// * `Result<Keypair, WalletError>` - The hotkey Keypair or an error.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// let wallet = Wallet::new("my_wallet", PathBuf::from("/path/to/wallet"));
-    /// let hotkey = wallet.get_hotkey("my_hotkey", "password").expect("Failed to get hotkey");
-    /// ```
-    // pub fn get_hotkey(&self, hotkey_name: &str, password: &str) -> Result<Keypair, WalletError> {
-    //     let encrypted_private = self
-    //         .hotkey_data
-    //         .as_ref()
-    //         .and_then(|data| data.get(hotkey_name))
-    //         .ok_or(WalletError::HotkeyNotFound)?;
-
-    //     let public = self.get_hotkey_public(hotkey_name, password)?;
-
-    //     Ok(Keypair::new(public, encrypted_private.clone()))
-    // }
-
-    // fn get_hotkey_public(
-    //     &self,
-    //     hotkey_name: &str,
-    //     password: &str,
-    // ) -> Result<sr25519::Public, WalletError> {
-    //     let derivation_path = self
-    //         .hotkey_paths
-    //         .get(hotkey_name)
-    //         .ok_or(WalletError::HotkeyNotFound)?;
-    //     let mnemonic = self.decrypt_mnemonic(password)?;
-    //     let seed = mnemonic.to_seed("");
-    //     let pair = self.derive_sr25519_key(&seed[..32], derivation_path)?;
-    //     Ok(pair.public())
-    // }
-
-    // pub async fn fetch_balance(&mut self) -> Result<(), WalletError> {
-    //     // TODO: Implement actual balance fetching logic
-    //     self.balance = Some(100.0);
-    //     Ok(())
-    // }
-    // pub fn get_coldkey_ss58(&self) -> Result<String, WalletError> {
-    //     let public = self.get_coldkey_public()?;
-    //     Ok(public.to_ss58check())
-    // }
-
-    // pub fn get_hotkey_ss58(&self, hotkey_name: &str) -> Result<String, WalletError> {
-    //     self.hotkey_public_keys
-    //         .get(hotkey_name)
-    //         .ok_or(WalletError::HotkeyNotFound)
-    //         .map(|public_key| public_key.to_ss58check())
-    // }
-
-    // fn get_coldkey_public(&self) -> Result<sr25519::Public, WalletError> {
-    //     // Assuming the first 32 bytes of encrypted_mnemonic are the public key
-    //     // This assumption needs to be validated in the implementation of create_new_wallet
-    //     let public_bytes: [u8; 32] = self.encrypted_mnemonic[..32]
-    //         .try_into()
-    //         .map_err(|_| WalletError::PublicKeyError)?;
-    //     Ok(sr25519::Public::from_raw(public_bytes))
-    // }
-
     /// Regenerates the wallet using a provided mnemonic phrase.
     ///
     /// # Arguments
@@ -518,29 +457,32 @@ impl Wallet {
     /// let mut wallet = Wallet::new("my_wallet", PathBuf::from("/path/to/wallet"));
     /// wallet.regenerate_wallet("your mnemonic phrase here", "secure_password").expect("Failed to regenerate wallet");
     /// ```
-    pub fn regenerate_wallet(&self, mnemonic: &str, password: &str) -> Result<(), WalletError> {
+    pub fn regenerate_wallet(&mut self, mnemonic: &str, password: &str) -> Result<(), WalletError> {
         // Parse the mnemonic phrase
         let mnemonic: Mnemonic = Mnemonic::parse_in_normalized(Language::English, mnemonic)
             .map_err(WalletError::MnemonicGenerationError)?;
 
         // Generate the seed from the mnemonic
-        let seed = mnemonic.to_seed("");
+        let seed: [u8; 32] = mnemonic.to_seed("")[..32]
+            .try_into()
+            .map_err(|_| WalletError::ConversionError)?;
 
         // Generate the sr25519 keypair from the seed
-        let pair = sr25519::Pair::from_seed_slice(&seed[..32])
-            .map_err(|_| WalletError::KeyDerivationError)?;
+        let pair = sr25519::Pair::from_seed(&seed);
 
         // Create a new ColdKeyPair
         let public = pair.public();
         let private = pair.to_raw_vec();
-        let cold_keypair = ColdKeyPair::new(public, private);
+        let cold_keypair = ColdKeyPair::new(public, private, false); // Set is_encrypted to false
 
         // Encrypt the cold keypair
         let encrypted_private = cold_keypair.encrypt(password)?;
 
         // Save the encrypted private key
-        let coldkey_path = self.path.join("coldkey");
-        std::fs::write(&coldkey_path, &encrypted_private).map_err(WalletError::IoError)?;
+        let coldkey_path: std::path::PathBuf = self.path.join("coldkey");
+        let encrypted_data = serde_json::to_string(&encrypted_private)
+            .map_err(|e| WalletError::SerializationError(e.to_string()))?;
+        std::fs::write(&coldkey_path, encrypted_data).map_err(WalletError::IoError)?;
 
         // Save the public key information
         self.save_coldkeypub(&cold_keypair)?;
@@ -551,6 +493,9 @@ impl Wallet {
             std::fs::remove_dir_all(&hotkeys_dir).map_err(WalletError::IoError)?;
             std::fs::create_dir(&hotkeys_dir).map_err(WalletError::IoError)?;
         }
+
+        // Update the wallet's coldkey
+        self.coldkey = Some(encrypted_private);
 
         Ok(())
     }
@@ -573,6 +518,7 @@ impl Wallet {
 
         Ok(())
     }
+
     /// Changes the password for the wallet and re-encrypts all sensitive data.
     ///
     /// This function decrypts the mnemonic using the old password, re-encrypts it with the new password,
@@ -587,173 +533,51 @@ impl Wallet {
     ///
     /// * `Result<(), WalletError>` - Ok(()) if successful, or an error if the operation fails.
     ///
+
     pub async fn change_password(
-        &self,
+        &mut self,
         old_password: &str,
         new_password: &str,
     ) -> Result<(), WalletError> {
-        // Read and decrypt the coldkey
-        let coldkey_path = self.path.join("coldkey");
-        let encrypted_coldkey = std::fs::read(&coldkey_path).map_err(WalletError::IoError)?;
-        let coldkey = ColdKeyPair::new(self.get_coldkey_public()?, encrypted_coldkey);
-        let decrypted_private = coldkey.decrypt(old_password)?;
+        let mut coldkey = self.coldkey.take().ok_or(WalletError::NoColdKey)?;
 
-        // Re-encrypt the coldkey with the new password
-        let new_encrypted_coldkey =
-            ColdKeyPair::new(coldkey.public, decrypted_private.clone()).encrypt(new_password)?;
-
-        // Save the new encrypted coldkey
-        std::fs::write(&coldkey_path, &new_encrypted_coldkey).map_err(WalletError::IoError)?;
-
-        // For hotkeys, we don't need to re-encrypt them as they are stored unencrypted
-        // However, we might want to update any password-related information if necessary
-        let hotkeys_dir = self.path.join("hotkeys");
-        if hotkeys_dir.exists() {
-            for entry in std::fs::read_dir(hotkeys_dir)? {
-                let entry: std::fs::DirEntry = entry.map_err(WalletError::IoError)?;
-                let path = entry.path();
-                if path.is_file() {
-                    let hotkey_json =
-                        std::fs::read_to_string(&path).map_err(WalletError::IoError)?;
-                    let hotkey_credentials: KeyCredentials = serde_json::from_str(&hotkey_json)
-                        .map_err(|e| WalletError::SerializationError(e.to_string()))?;
-
-                    let updated_hotkey_json = serde_json::to_string_pretty(&hotkey_credentials)
-                        .map_err(|e| WalletError::SerializationError(e.to_string()))?;
-                    std::fs::write(&path, updated_hotkey_json).map_err(WalletError::IoError)?;
-                }
+        match coldkey.re_encrypt(old_password, new_password) {
+            Ok(_) => {
+                self.coldkey = Some(coldkey);
+                self.save_coldkey()
+            }
+            Err(e) => {
+                // Put the coldkey back if re-encryption fails
+                self.coldkey = Some(coldkey);
+                Err(e)
             }
         }
-
-        Ok(())
     }
 
-    // Helper method to get the coldkey public key
-    fn get_coldkey_public(&self) -> Result<sr25519::Public, WalletError> {
-        let coldkey_pub_path = self.path.join("coldkeypub.txt");
-        let coldkey_pub_json: String =
-            std::fs::read_to_string(&coldkey_pub_path).map_err(WalletError::IoError)?;
-        let coldkey_pub: KeyCredentials = serde_json::from_str(&coldkey_pub_json)
-            .map_err(|e| WalletError::SerializationError(e.to_string()))?;
-
-        sr25519::Public::from_slice(
-            &hex::decode(&coldkey_pub.public_key[2..])
-                .map_err(|e| WalletError::HexDecodeError(e.to_string()))?,
-        )
-        .map_err(|_| WalletError::InvalidPublicKey)
+    fn save_coldkey(&self) -> Result<(), WalletError> {
+        let coldkey_path = self.path.join("coldkey");
+        let coldkey_json = self
+            .coldkey
+            .as_ref()
+            .ok_or(WalletError::NoColdKey)?
+            .to_json()?;
+        std::fs::write(coldkey_path, coldkey_json).map_err(WalletError::IoError)
     }
 
-    // fn encrypt_mnemonic(
-    //     &self,
-    //     mnemonic: &Mnemonic,
-    //     password: &str,
-    // ) -> Result<Vec<u8>, WalletError> {
-    //     let salt: [u8; 16] = rand::thread_rng().gen();
-    //     let argon2 = Argon2::default();
-    //     let mut key = [0u8; 32];
-    //     argon2
-    //         .hash_password_into(password.as_bytes(), &salt, &mut key)
-    //         .map_err(|_| WalletError::EncryptionError)?;
+    // // Helper method to get the coldkey public key
+    // fn get_coldkey_public(&self) -> Result<sr25519::Public, WalletError> {
+    //     let coldkey_pub_path = self.path.join("coldkeypub.txt");
+    //     let coldkey_pub_json: String =
+    //         std::fs::read_to_string(&coldkey_pub_path).map_err(WalletError::IoError)?;
+    //     let coldkey_pub: KeyCredentials = serde_json::from_str(&coldkey_pub_json)
+    //         .map_err(|e| WalletError::SerializationError(e.to_string()))?;
 
-    //     let cipher = Aes256Gcm::new_from_slice(&key).map_err(|_| WalletError::EncryptionError)?;
-    //     let nonce = Nonce::from(rand::thread_rng().gen::<[u8; 12]>());
-    //     let mnemonic_string = mnemonic.to_string();
-    //     let mnemonic_bytes = mnemonic_string.as_bytes();
-
-    //     log::debug!("Encrypting mnemonic of length: {}", mnemonic_bytes.len());
-
-    //     let ciphertext = cipher
-    //         .encrypt(&nonce, mnemonic_bytes)
-    //         .map_err(|_| WalletError::EncryptionError)?;
-
-    //     let mut encrypted = Vec::with_capacity(salt.len() + nonce.len() + ciphertext.len());
-    //     encrypted.extend_from_slice(&salt);
-    //     encrypted.extend_from_slice(nonce.as_slice());
-    //     encrypted.extend_from_slice(&ciphertext);
-
-    //     log::debug!(
-    //         "Encrypted data length (before adding public key): {}",
-    //         encrypted.len()
-    //     );
-    //     log::debug!(
-    //         "Salt length: {}, Nonce length: {}, Ciphertext length: {}",
-    //         salt.len(),
-    //         nonce.len(),
-    //         ciphertext.len()
-    //     );
-
-    //     // Generate and prepend public key
-    //     let seed = mnemonic.to_seed("");
-    //     let pair = sr25519::Pair::from_seed_slice(&seed[..32])
-    //         .map_err(|_| WalletError::KeyDerivationError)?;
-    //     let public_key = pair.public();
-
-    //     let mut final_encrypted = Vec::with_capacity(32 + encrypted.len());
-    //     final_encrypted.extend_from_slice(public_key.as_ref());
-    //     final_encrypted.extend_from_slice(&encrypted);
-
-    //     log::debug!(
-    //         "Final encrypted data length (including public key): {}",
-    //         final_encrypted.len()
-    //     );
-
-    //     Ok(final_encrypted)
+    //     sr25519::Public::from_slice(
+    //         &hex::decode(&coldkey_pub.public_key[2..])
+    //             .map_err(|e| WalletError::HexDecodeError(e.to_string()))?,
+    //     )
+    //     .map_err(|_| WalletError::InvalidPublicKey)
     // }
-
-    // fn decrypt_mnemonic(&self, password: &str) -> Result<Mnemonic, WalletError> {
-    //     log::debug!(
-    //         "Decrypting mnemonic of length: {}",
-    //         self.encrypted_mnemonic.len()
-    //     );
-
-    //     if self.encrypted_mnemonic.len() < 92 {
-    //         // 32 (public key) + 16 (salt) + 12 (nonce) + 32 (minimum ciphertext)
-    //         log::error!("Encrypted mnemonic is too short");
-    //         return Err(WalletError::DecryptionError);
-    //     }
-
-    //     let public_key = &self.encrypted_mnemonic[..32];
-    //     let salt = &self.encrypted_mnemonic[32..48];
-    //     let nonce = &self.encrypted_mnemonic[48..60];
-    //     let ciphertext = &self.encrypted_mnemonic[60..];
-
-    //     log::debug!(
-    //         "Public key length: {}, Salt length: {}, Nonce length: {}, Ciphertext length: {}",
-    //         public_key.len(),
-    //         salt.len(),
-    //         nonce.len(),
-    //         ciphertext.len()
-    //     );
-
-    //     // Derive the key from the password using Argon2
-    //     let argon2 = Argon2::default();
-    //     let mut key = [0u8; 32];
-    //     if let Err(e) = argon2.hash_password_into(password.as_bytes(), salt, &mut key) {
-    //         log::error!("Failed to derive key from password: {:?}", e);
-    //         return Err(WalletError::DecryptionError);
-    //     }
-
-    //     // Create an AES-256-GCM cipher
-    //     let cipher = Aes256Gcm::new_from_slice(&key).map_err(|e| {
-    //         log::error!("Failed to create AES cipher: {:?}", e);
-    //         WalletError::DecryptionError
-    //     })?;
-
-    //     // Decrypt the ciphertext
-    //     let plaintext = cipher
-    //         .decrypt(Nonce::from_slice(nonce), ciphertext)
-    //         .map_err(|e| {
-    //             log::error!("Failed to decrypt ciphertext: {:?}", e);
-    //             WalletError::DecryptionError
-    //         })?;
-
-    //     // Convert plaintext to string and parse as Mnemonic
-    //     let mnemonic_str = String::from_utf8(plaintext).map_err(|e| {
-    //         log::error!("Failed to convert decrypted data to UTF-8: {:?}", e);
-    //         WalletError::DecryptionError
-    //     })?;
-
-    //     log::debug!("Decrypted mnemonic string length: {}", mnemonic_str.len());
 
     /// Creates a new coldkey, encrypts it with the given password, and saves it to the wallet.
     ///
@@ -765,17 +589,25 @@ impl Wallet {
     ///
     /// * `Result<(), WalletError>` - Ok(()) if successful, or an error if the operation fails.
     ///
+    /// # Errors
+    ///
+    /// * `WalletError::EncryptionError` - If there's an issue encrypting the coldkey.
+    /// * `WalletError::IoError` - If there's an issue saving the coldkey to persistent storage.
+    ///
+
     pub fn create_new_coldkey(&mut self, password: &str) -> Result<(), WalletError> {
         // Generate a new ColdKeyPair
         let coldkey: ColdKeyPair = ColdKeyPair::generate();
 
         // Encrypt the coldkey with the provided password
-        let encrypted: Vec<u8> = coldkey.encrypt(password)?;
+        let encrypted_coldkey: ColdKeyPair = coldkey
+            .encrypt(password)
+            .map_err(|e| WalletError::EncryptionError(e.to_string()))?;
 
-        // Store the new coldkey in the wallet
-        self.coldkey = Some(ColdKeyPair::new(coldkey.public, encrypted));
+        // Store the new encrypted coldkey in the wallet
+        self.coldkey = Some(encrypted_coldkey);
 
-        // Save the coldkey to persistent storage
+        // Save the coldkey public key to persistent storage
         self.save_coldkeypub(&coldkey)?;
 
         Ok(())
@@ -791,6 +623,12 @@ impl Wallet {
     /// # Returns
     ///
     /// * `Result<(), WalletError>` - Ok(()) if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * `WalletError::InvalidMnemonic` - If the provided mnemonic is invalid.
+    /// * `WalletError::EncryptionError` - If there's an issue encrypting the coldkey.
+    /// * `WalletError::IoError` - If there's an issue saving the coldkey to persistent storage.
     ///
     /// # Examples
     ///
@@ -812,65 +650,17 @@ impl Wallet {
             .map_err(|_| WalletError::InvalidMnemonic)?;
 
         // Encrypt the coldkey with the provided password
-        let encrypted: Vec<u8> = coldkey.encrypt(password)?;
+        let encrypted_coldkey: ColdKeyPair = coldkey
+            .encrypt(password)
+            .map_err(|e| WalletError::EncryptionError(e.to_string()))?;
 
         // Store the new coldkey in the wallet
-        self.coldkey = Some(ColdKeyPair::new(coldkey.public, encrypted));
+        self.coldkey = Some(encrypted_coldkey);
 
         // Save the coldkey public key to persistent storage
         self.save_coldkeypub(&coldkey)?;
 
         Ok(())
-    }
-
-    /// Decrypts the coldkey using the provided password.
-    ///
-    /// # Arguments
-    ///
-    /// * `password` - A string slice that holds the password for decrypting the coldkey.
-    ///
-    /// # Returns
-    ///
-    /// * `Result<Vec<u8>, WalletError>` - A vector of bytes representing the decrypted coldkey if successful,
-    ///   or a `WalletError` if the operation fails.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bittensor_wallet::{Wallet, WalletError};
-    /// use std::path::PathBuf;
-    ///
-    /// # fn main() -> Result<(), WalletError> {
-    /// let wallet = Wallet::new("my_wallet", PathBuf::from("/path/to/wallet"));
-    /// let password = "secure_password";
-    /// let decrypted_coldkey = wallet.decrypt_coldkey(password)?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    /// Decrypts the coldkey using the provided password.
-    ///
-    /// # Arguments
-    ///
-    /// * `password` - A string slice that holds the password for decrypting the coldkey.
-    ///
-    /// # Returns
-    ///
-    /// * `Result<Vec<u8>, WalletError>` - A vector of bytes representing the decrypted coldkey if successful,
-    ///   or a `WalletError` if the operation fails.
-    ///
-
-    pub fn decrypt_coldkey(&self, password: &str) -> Result<Vec<u8>, WalletError> {
-        // Attempt to get a reference to the coldkey, returning a NotFound error if it doesn't exist
-        let coldkey: &ColdKeyPair = self
-            .coldkey
-            .as_ref()
-            .ok_or_else(|| WalletError::NotFound("Coldkey not found".to_string()))?;
-
-        // Attempt to decrypt the coldkey using the provided password
-        coldkey.decrypt(password).map_err(|e| {
-            // Create a specific error for decryption failures
-            WalletError::DecryptionError(format!("Failed to decrypt coldkey: {}", e))
-        })
     }
 
     /// Updates the encrypted private key for a specific hotkey.
@@ -991,39 +781,48 @@ impl Wallet {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use tempfile::tempdir;
+    use std::sync::Arc;
+    use tempfile::{tempdir, TempDir};
 
     fn init() {
         let _ = env_logger::builder().is_test(true).try_init();
     }
     /// Helper function to create a test wallet
-    fn create_test_wallet() -> Result<Wallet, WalletError> {
-        let dir = tempdir().map_err(WalletError::IoError)?;
-        let wallet = Wallet::new("test_wallet".to_string(), dir.path().to_path_buf());
-        // wallet.create_new_wallet(12, "test_password")?;
-        Ok(wallet)
+    fn create_test_wallet() -> Result<(Wallet, Arc<TempDir>), WalletError> {
+        let dir = Arc::new(tempdir().map_err(WalletError::IoError)?);
+        let wallet_path = dir.path().to_path_buf();
+
+        // Ensure the directory exists
+        std::fs::create_dir_all(&wallet_path).map_err(WalletError::IoError)?;
+
+        let wallet = Wallet::new("test_wallet".to_string(), wallet_path)?;
+        Ok((wallet, dir))
     }
 
     #[test]
     fn test_wallet_creation() {
-        let wallet = create_test_wallet().expect("Failed to create test wallet");
+        let (wallet, _temp_dir) = create_test_wallet().expect("Failed to create test wallet");
+
+        // Print debug information
+        println!("Wallet path: {:?}", wallet.path);
+        println!("Path exists: {}", wallet.path.exists());
+
         assert_eq!(wallet.name, "test_wallet");
-        assert!(wallet.path.exists());
+        assert!(wallet.path.exists(), "Wallet path does not exist");
         assert!(wallet.coldkey.is_none());
         assert!(wallet.hotkeys.is_empty());
     }
 
     #[test]
     fn test_create_new_wallet() {
-        let wallet = create_test_wallet().expect("Failed to create test wallet");
+        let (wallet, _temp_dir) = create_test_wallet().expect("Failed to create test wallet");
         assert!(wallet.create_new_wallet("password123").is_ok());
     }
 
     #[test]
     fn test_create_new_hotkey() {
         let _ = env_logger::builder().is_test(true).try_init();
-        let wallet = create_test_wallet().expect("Failed to create test wallet");
+        let (mut wallet, _temp_dir) = create_test_wallet().expect("Failed to create test wallet");
 
         // First, create a new wallet with a mnemonic
         wallet
@@ -1048,18 +847,35 @@ mod tests {
 
     #[test]
     fn test_get_coldkey() {
+        // Initialize the logger for debugging purposes
         init();
-        let wallet = create_test_wallet().expect("Failed to create test wallet");
+
+        // Create a new test wallet
+        let (mut wallet, _temp_dir): (Wallet, Arc<TempDir>) =
+            create_test_wallet().expect("Failed to create test wallet");
+
+        // Create a new wallet with a password
+        let password: String = "password123".to_string();
         wallet
-            .create_new_wallet("password123")
+            .create_new_wallet(&password)
             .expect("Failed to create new wallet");
-        let coldkey = wallet.get_coldkey("password123");
-        assert!(coldkey.is_ok());
+
+        // Attempt to retrieve the coldkey
+        match wallet.get_coldkey(&password) {
+            Ok(coldkey) => {
+                println!("Successfully retrieved coldkey: {:?}", coldkey);
+                // TODO: Add more assertions to verify the correctness of the retrieved coldkey
+            }
+            Err(e) => panic!("Failed to get coldkey: {:?}", e),
+        }
+
+        // Note: Consider adding negative test cases, such as attempting to retrieve
+        // the coldkey with an incorrect password
     }
 
     #[test]
     fn test_regenerate_wallet() {
-        let wallet = create_test_wallet().expect("Failed to create test wallet");
+        let (mut wallet, _temp_dir) = create_test_wallet().expect("Failed to create test wallet");
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         wallet
             .regenerate_wallet(mnemonic, "password123")
@@ -1067,83 +883,70 @@ mod tests {
         assert!(wallet.coldkey.is_some());
     }
 
-    /// Tests the password change functionality of the wallet.
-    ///
-    /// This test creates a new wallet, adds a hotkey, and then attempts to change the password.
-    /// It verifies that the password change operation completes successfully.
-    ///
-    /// Tests the password change functionality of the wallet.
-    ///
-    /// This test creates a new wallet, adds a hotkey, changes the password, and verifies
-    /// that operations fail with the old password but succeed with the new password.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// let mut wallet = Wallet::new("test_wallet", PathBuf::from("/tmp"));
-    /// wallet.create_new_wallet("old_password").unwrap();
-    /// wallet.create_new_hotkey("hotkey1").unwrap();
-    /// wallet.change_password("old_password", "new_password").await.unwrap();
-    /// ```
     #[tokio::test]
     async fn test_change_password() {
+        use env_logger::Builder;
+        use log::LevelFilter;
+
+        // Set up logging
+        let _ = Builder::new().filter_level(LevelFilter::Debug).try_init();
+
         // Create a new test wallet
-        let wallet: Wallet = create_test_wallet().expect("Failed to create test wallet");
+        let (mut wallet, _temp_dir) = create_test_wallet().expect("Failed to create test wallet");
 
         // Create a new wallet with the initial password
+        let initial_password = "old_password";
         wallet
-            .create_new_wallet("old_password")
+            .create_new_wallet(initial_password)
             .expect("Failed to create new wallet");
 
-        // Create a new hotkey using the initial password
-        wallet
-            .create_new_hotkey("hotkey1")
-            .expect("Failed to create new hotkey");
-
-        // Attempt to change the password
-        let change_result = wallet.change_password("old_password", "new_password").await;
-
-        // Check the result of the password change operation
-        assert!(
-            change_result.is_ok(),
-            "Failed to change password: {:?}",
-            change_result.err()
+        // Print the contents of the coldkey file for debugging
+        let coldkey_path = wallet.path.join("coldkey");
+        let coldkey_contents =
+            std::fs::read_to_string(&coldkey_path).expect("Failed to read coldkey file");
+        println!(
+            "Coldkey file contents before password change: {}",
+            coldkey_contents
         );
 
+        // Attempt to change the password
+        let new_password = "new_password";
+        let change_result = wallet.change_password(initial_password, new_password).await;
+
+        // Check the result of the password change operation
+        match change_result {
+            Ok(_) => {
+                println!("Password changed successfully");
+                // Print the contents of the coldkey file after password change
+                let coldkey_contents = std::fs::read_to_string(&coldkey_path)
+                    .expect("Failed to read coldkey file after password change");
+                println!(
+                    "Coldkey file contents after password change: {}",
+                    coldkey_contents
+                );
+            }
+            Err(e) => panic!("Failed to change password: {:?}", e),
+        }
+
         // Verify that operations fail with the old password
-        let old_password_result = wallet.get_coldkey("old_password");
+        let old_password_result = wallet.get_coldkey(initial_password);
         assert!(
             old_password_result.is_err(),
             "Operation succeeded with old password when it should have failed"
         );
 
         // Verify that operations succeed with the new password
-        let new_password_result = wallet.get_coldkey("new_password");
+        let new_password_result = wallet.get_coldkey(new_password);
         assert!(
             new_password_result.is_ok(),
-            "Operation failed with new password when it should have succeeded"
+            "Operation failed with new password when it should have succeeded: {:?}",
+            new_password_result.err()
         );
-
-        // TODO: Add more comprehensive tests for other wallet operations after password change
     }
-
-    // #[test]
-    // fn test_encrypt_decrypt_mnemonic() {
-    //     init();
-    //     let mut wallet = create_test_wallet();
-    //     let mnemonic = Mnemonic::from_str("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap();
-    //     let encrypted = wallet.encrypt_mnemonic(&mnemonic, "password123").unwrap();
-
-    //     // Use the encrypted mnemonic to test decryption
-    //     wallet.encrypted_mnemonic = encrypted;
-
-    //     let decrypted = wallet.decrypt_mnemonic("password123").unwrap();
-    //     assert_eq!(mnemonic.to_string(), decrypted.to_string());
-    // }
 
     #[test]
     fn test_update_hotkey_encryption() {
-        let mut wallet = create_test_wallet().expect("Failed to create test wallet");
+        let (mut wallet, _temp_dir) = create_test_wallet().expect("Failed to create test wallet");
 
         // First, create a new wallet
         wallet
@@ -1169,85 +972,10 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_wallet_decrypt_private_key_performance() {
-    //     let mut wallet = create_test_wallet();
-    //     wallet.create_new_wallet(12, "password123").unwrap();
-    //     wallet
-    //         .create_new_hotkey("test_hotkey", "password123")
-    //         .unwrap();
-
-    //     let start = Instant::now();
-    //     for _ in 0..10 {
-    //         // Reduced from 100 to 10 iterations
-    //         let _ = wallet.get_hotkey("test_hotkey", "password123").unwrap();
-    //     }
-    //     let duration = start.elapsed();
-
-    //     println!("Average decryption time: {:?}", duration / 10);
-    //     assert!(duration.as_millis() < 5000, "Decryption is too slow"); // Increased threshold to 5000ms
-    // }
-
-    // #[test]
-    // fn test_wallet_mnemonic_encryption_uniqueness() {
-    //     let mut encrypted_mnemonics = HashSet::new();
-
-    //     for _ in 0..1000 {
-    //         let mut wallet = create_test_wallet();
-    //         wallet.create_new_wallet(12, "password123").unwrap();
-
-    //         // Check that this encrypted mnemonic is unique
-    //         assert!(
-    //             encrypted_mnemonics.insert(wallet.encrypted_mnemonic.clone()),
-    //             "Duplicate encrypted mnemonic found"
-    //         );
-    //     }
-    // }
-
-    // #[test]
-    // fn test_get_hotkey_ss58() {
-    //     let mut wallet = create_test_wallet();
-    //     wallet.create_new_wallet(12, "password123").unwrap();
-    //     wallet
-    //         .create_new_hotkey("test_hotkey", "password123")
-    //         .unwrap();
-
-    //     let ss58_address = wallet.get_hotkey_ss58("test_hotkey").unwrap();
-
-    //     assert!(!ss58_address.is_empty());
-    //     assert!(ss58_address.starts_with('5')); // SS58 addresses typically start with '5'
-    //     assert_eq!(ss58_address.len(), 48); // SS58 addresses are typically 48 characters long assert_eq!(ss58_address.len(), 48); // SS58 addresses are typically 48 characters long
-    // }
-    // #[test]
-    // fn test_get_hotkey_ss58() {
-    //     let mut wallet = create_test_wallet();
-    //     wallet.create_new_wallet(12, "password123").unwrap();
-    //     wallet
-    //         .create_new_hotkey("test_hotkey", "password123")
-    //         .unwrap();
-
-    //     let ss58_address = wallet.get_hotkey_ss58("test_hotkey").unwrap();
-
-    //     assert!(!ss58_address.is_empty());
-    //     assert!(ss58_address.starts_with('5'));
-    //     assert_eq!(ss58_address.len(), 48); //
-    // }
-    /// Tests the behavior of `get_hotkey_ss58` method when attempting to retrieve a non-existent hotkey.
-    ///
-    /// This test ensures that the wallet correctly handles requests for hotkeys that don't exist,
-    /// returning an appropriate error.
-    ///
-    /// # Example
-    /// ```
-    /// let wallet = Wallet::new();
-    /// let result = wallet.get_hotkey_ss58("nonexistent_hotkey");
-    /// assert!(result.is_err());
-    /// assert!(matches!(result.unwrap_err(), WalletError::HotkeyNotFound));
-    /// ```
     #[test]
     fn test_get_hotkey_ss58_nonexistent() {
         // Create a new test wallet
-        let wallet: Wallet = create_test_wallet().unwrap();
+        let (wallet, _temp_dir) = create_test_wallet().expect("Failed to create test wallet");
 
         // Attempt to get the SS58 address of a non-existent hotkey
         let result: Result<String, WalletError> = wallet.get_hotkey_ss58("nonexistent_hotkey");
@@ -1264,29 +992,10 @@ mod tests {
             "Expected WalletError::HotkeyNotFound"
         );
     }
-    /// Tests the consistency of SS58 address generation for coldkeys and hotkeys.
-    ///
-    /// This test ensures that:
-    /// 1. The wallet can be created and a hotkey can be added.
-    /// 2. Coldkey and hotkey SS58 addresses are different.
-    /// 3. Multiple calls to get SS58 addresses return consistent results.
-    ///
-    /// # Example
-    /// ```
-    /// let wallet = create_test_wallet().unwrap();
-    /// wallet.create_new_wallet("password123").unwrap();
-    /// wallet.create_new_hotkey("test_hotkey").unwrap();
-    ///
-    /// let coldkey_ss58 = wallet.get_coldkey_ss58("password123").unwrap();
-    /// let hotkey_ss58 = wallet.get_hotkey_ss58("test_hotkey").unwrap();
-    ///
-    /// assert_ne!(coldkey_ss58, hotkey_ss58);
-    /// assert_eq!(coldkey_ss58, wallet.get_coldkey_ss58("password123").unwrap());
-    /// assert_eq!(hotkey_ss58, wallet.get_hotkey_ss58("test_hotkey").unwrap());
-    /// ```
+
     #[test]
     fn test_ss58_consistency() {
-        let wallet = create_test_wallet().expect("Failed to create test wallet");
+        let (mut wallet, _temp_dir) = create_test_wallet().expect("Failed to create test wallet");
         wallet
             .create_new_wallet("password123")
             .expect("Failed to create new wallet");

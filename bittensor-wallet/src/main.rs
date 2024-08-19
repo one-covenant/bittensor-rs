@@ -95,7 +95,7 @@ fn main() -> Result<(), WalletError> {
             words,
             password,
         } => {
-            let wallet = Wallet::new(name.clone(), path.clone());
+            let wallet = Wallet::new(name.clone(), path.clone())?;
             wallet.create_new_wallet(password)?;
             println!("Wallet created successfully with {} words", words);
         }
@@ -105,7 +105,7 @@ fn main() -> Result<(), WalletError> {
             wallet_path,
             _password,
         } => {
-            let wallet = Wallet::new(wallet_name.clone(), wallet_path.clone());
+            let mut wallet = Wallet::new(wallet_name.clone(), wallet_path.clone())?;
             wallet.create_new_hotkey(name)?;
             println!("Hotkey added successfully");
         }
@@ -115,7 +115,7 @@ fn main() -> Result<(), WalletError> {
             mnemonic,
             password,
         } => {
-            let wallet = Wallet::new(name.clone(), path.clone());
+            let mut  wallet = Wallet::new(name.clone(), path.clone())?;
             wallet.regenerate_wallet(mnemonic, password)?;
             println!("Wallet regenerated successfully");
         }
@@ -125,7 +125,7 @@ fn main() -> Result<(), WalletError> {
             old_password,
             new_password,
         } => {
-            let wallet = Wallet::new(name.clone(), path.clone());
+            let mut wallet = Wallet::new(name.clone(), path.clone())?;
             tokio::runtime::Runtime::new()
                 .unwrap()
                 .block_on(wallet.change_password(old_password, new_password))?;
@@ -136,7 +136,7 @@ fn main() -> Result<(), WalletError> {
             path,
             password,
         } => {
-            let wallet = Wallet::new(name.clone(), path.clone());
+            let wallet = Wallet::new(name.clone(), path.clone())?;
             let coldkey = wallet.get_coldkey(password)?;
             println!("Coldkey public key: {:?}", coldkey.public);
             println!("Coldkey SS58 address: {}", coldkey.public.to_ss58check());
@@ -146,7 +146,7 @@ fn main() -> Result<(), WalletError> {
             wallet_name,
             wallet_path,
         } => {
-            let wallet = Wallet::new(wallet_name.clone(), wallet_path.clone());
+            let wallet = Wallet::new(wallet_name.clone(), wallet_path.clone())?;
             let hotkey = wallet.get_hotkey(name)?;
             println!("Hotkey public key: {:?}", hotkey.public);
             println!("Hotkey SS58 address: {}", hotkey.public.to_ss58check());
@@ -156,7 +156,7 @@ fn main() -> Result<(), WalletError> {
             path,
             password,
         } => {
-            let wallet = Wallet::new(name.clone(), path.clone());
+            let wallet = Wallet::new(name.clone(), path.clone())?;
 
             // Display coldkey information
             let coldkey = wallet.get_coldkey(password)?;

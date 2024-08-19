@@ -28,7 +28,7 @@ impl PyWallet {
     #[new]
     fn new(name: &str, path: &str) -> Self {
         PyWallet {
-            wallet: Wallet::new(name.to_string(), PathBuf::from(path)),
+            wallet: Wallet::new(name.to_string(), PathBuf::from(path)).expect("Failed to create wallet"),
         }
     }
 
@@ -101,7 +101,7 @@ impl PyWallet {
         new_password: &str,
     ) -> PyResult<&'py PyAny> {
         // Clone the wallet to move it into the async closure
-        let wallet = self.wallet.clone();
+        let mut wallet = self.wallet.clone();
 
         // Convert passwords to owned String to move into the async closure
         let old_password: String = old_password.to_string();
@@ -216,7 +216,7 @@ impl PyColdKeyPair {
         let public_key = sp_core::sr25519::Public::try_from(&public[..])
             .map_err(|_| PyValueError::new_err("Invalid public key"))?;
         Ok(PyColdKeyPair {
-            coldkeypair: ColdKeyPair::new(public_key, encrypted_private),
+            coldkeypair: ColdKeyPair::new(public_key, encrypted_private, true),
         })
     }
 
@@ -234,15 +234,52 @@ impl PyColdKeyPair {
             .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
-    fn encrypt(&self, password: &str) -> PyResult<Vec<u8>> {
+    /// Encrypts the private key using the provided password.
+    ///
+    /// # Arguments
+    ///
+    /// * `password` - A string slice that holds the password for encryption.
+    ///
+    /// # Returns
+    ///
+    /// * `PyResult<Self>` - A Result containing a new PyColdKeyPair with the encrypted private key if successful,
+    ///   or a PyValueError if encryption fails.
+    ///
+    /// # Examples
+    ///
+    /// ```python
+    /// password = "my_secure_password"
+    /// encrypted_cold_key_pair = cold_key_pair.encrypt(password)
+    /// ```
+    fn encrypt(&self, password: &str) -> PyResult<Self> {
         self.coldkeypair
             .encrypt(password)
+            .map(|encrypted_keypair| PyColdKeyPair { coldkeypair: encrypted_keypair })
             .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
-    fn decrypt(&self, password: &str) -> PyResult<Vec<u8>> {
+    /// Decrypts the private key using the provided password.
+    ///
+    /// # Arguments
+    ///
+    /// * `password` - A string slice that holds the password for decryption.
+    /// * `nonce` - A vector of bytes representing the nonce used for encryption.
+    ///
+    /// # Returns
+    ///
+    /// * `PyResult<Vec<u8>>` - A Result containing the decrypted private key as a vector of bytes if successful,
+    ///   or a PyValueError if decryption fails.
+    ///
+    /// # Examples
+    ///
+    /// ```python
+    /// password = "my_secure_password"
+    /// nonce = b'\x01\x02\x03...'  # 24 bytes
+    /// decrypted_private_key = cold_key_pair.decrypt(password, nonce)
+    /// ```
+    fn decrypt(&self, password: &str, nonce: Vec<u8>) -> PyResult<Vec<u8>> {
         self.coldkeypair
-            .decrypt(password)
+            .decrypt(password, &nonce)
             .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
@@ -288,8 +325,9 @@ impl PyHotKeyPair {
     }
 
     fn sign<'py>(&self, py: Python<'py>, message: &[u8]) -> PyResult<&'py PyBytes> {
-        let signature = self.hotkeypair.sign(message);
-        Ok(PyBytes::new(py, &signature.0))
+        let signature = self.hotkeypair.sign(message)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        Ok(PyBytes::new(py, &signature))
     }
 
     fn to_mnemonic(&self) -> String {

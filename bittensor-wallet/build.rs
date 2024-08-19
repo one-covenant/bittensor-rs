@@ -1,5 +1,6 @@
-use std::process::Command;
+use std::env;
 use std::path::PathBuf;
+use std::process::Command;
 
 fn main() {
     // Auto-detect Python executable
@@ -8,7 +9,9 @@ fn main() {
         .output()
         .expect("Failed to execute 'which python'")
         .stdout;
-    let python_executable = String::from_utf8_lossy(&python_executable).trim().to_string();
+    let python_executable = String::from_utf8_lossy(&python_executable)
+        .trim()
+        .to_string();
 
     // Get Python version
     let python_version = Command::new(&python_executable)
@@ -19,7 +22,12 @@ fn main() {
     let python_version = String::from_utf8_lossy(&python_version).trim().to_string();
 
     // Extract major and minor version numbers
-    let version_parts: Vec<&str> = python_version.split(' ').last().unwrap().split('.').collect();
+    let version_parts: Vec<&str> = python_version
+        .split(' ')
+        .last()
+        .unwrap()
+        .split('.')
+        .collect();
     let major_version = version_parts[0];
     let minor_version = version_parts[1];
 
@@ -33,13 +41,20 @@ fn main() {
     println!("cargo:warning=Python lib dir: {}", python_lib_dir.display());
 
     // Set linker flags
-    println!("cargo:rustc-link-search=native={}", python_lib_dir.display());
-    println!("cargo:rustc-link-lib=python{}.{}", major_version, minor_version);
+    println!(
+        "cargo:rustc-link-search=native={}",
+        python_lib_dir.display()
+    );
+    println!(
+        "cargo:rustc-link-lib=python{}.{}",
+        major_version, minor_version
+    );
 
-    // Use pkg-config as a fallback
-    if let Err(_) = pkg_config::Config::new()
-        .probe(&format!("python-{}.{}", major_version, minor_version))
-    {
-        println!("cargo:warning=Failed to find Python using pkg-config, falling back to detected paths");
+    // Set rpath for tests
+    if env::var("CARGO_CFG_TARGET_OS").unwrap() == "macos" {
+        println!(
+            "cargo:rustc-link-arg=-Wl,-rpath,{}",
+            python_lib_dir.display()
+        );
     }
 }
