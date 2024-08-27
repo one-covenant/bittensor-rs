@@ -7,6 +7,8 @@ use crate::keypair::{ColdKeyPair, HotKeyPair, KeyPair};
 use crate::wallet::Wallet;
 use pyo3::exceptions::{PyException, PyValueError};
 use sp_core::crypto::Ss58Codec;
+use sp_core::sr25519;
+use sp_core::ByteArray;
 
 /// A Python module implemented in Rust.
 #[pymodule]
@@ -28,7 +30,8 @@ impl PyWallet {
     #[new]
     fn new(name: &str, path: &str) -> Self {
         PyWallet {
-            wallet: Wallet::new(name.to_string(), PathBuf::from(path)).expect("Failed to create wallet"),
+            wallet: Wallet::new(name.to_string(), PathBuf::from(path))
+                .expect("Failed to create wallet"),
         }
     }
 
@@ -109,10 +112,11 @@ impl PyWallet {
 
         // Convert the Rust Future into a Python Future
         pyo3_asyncio::tokio::future_into_py(py, async move {
-            wallet
-                .change_password(&old_password, &new_password)
-                .await
-                .map_err(wallet_error_to_pyerr)
+            // Execute the change_password operation and handle the result
+            match wallet.change_password(&old_password, &new_password) {
+                Ok(_) => Ok(()),
+                Err(e) => Err(wallet_error_to_pyerr(e)),
+            }
         })
     }
 
@@ -211,12 +215,44 @@ impl PyColdKeyPair {
     /// encrypted_private = b'\x78\x90\xAB...'  # Encrypted private key
     /// cold_key_pair = PyColdKeyPair(public_key, encrypted_private)
     /// ```
+    /// Creates a new PyColdKeyPair instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `public` - A vector of bytes representing the public key.
+    /// * `encrypted_private` - A vector of bytes representing the encrypted private key.
+    ///
+    /// # Returns
+    ///
+    /// * `PyResult<Self>` - A new PyColdKeyPair instance if successful, or a PyValueError if the public key is invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```python
+    /// public_key = b'\x12\x34\x56...'  # 32 bytes
+    /// encrypted_private = b'\x78\x90\xAB...'  # Encrypted private key
+    /// cold_key_pair = PyColdKeyPair(public_key, encrypted_private)
+    /// ```
     #[new]
     fn new(public: Vec<u8>, encrypted_private: Vec<u8>) -> PyResult<Self> {
-        let public_key = sp_core::sr25519::Public::try_from(&public[..])
-            .map_err(|_| PyValueError::new_err("Invalid public key"))?;
+        // Convert the public key bytes to a fixed-size array
+        let public_key_array: [u8; 32] = public
+            .try_into()
+            .map_err(|_| PyValueError::new_err("Invalid public key length"))?;
+
+        // Create the sr25519::Public key from the fixed-size array
+        let public_key = sp_core::sr25519::Public::from_raw(public_key_array);
+
+        // Create and return the PyColdKeyPair instance
         Ok(PyColdKeyPair {
-            coldkeypair: ColdKeyPair::new(public_key, encrypted_private, true),
+            coldkeypair: ColdKeyPair::new(
+                sr25519::Public::from_slice(&public_key)
+                    .map_err(|_| PyValueError::new_err("Invalid public key"))?,
+                encrypted_private
+                    .try_into()
+                    .map_err(|_| PyValueError::new_err("Private key should be 32 bytes"))?,
+                true,
+            ),
         })
     }
 
@@ -254,7 +290,9 @@ impl PyColdKeyPair {
     fn encrypt(&self, password: &str) -> PyResult<Self> {
         self.coldkeypair
             .encrypt(password)
-            .map(|encrypted_keypair| PyColdKeyPair { coldkeypair: encrypted_keypair })
+            .map(|encrypted_keypair| PyColdKeyPair {
+                coldkeypair: encrypted_keypair,
+            })
             .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
@@ -263,7 +301,6 @@ impl PyColdKeyPair {
     /// # Arguments
     ///
     /// * `password` - A string slice that holds the password for decryption.
-    /// * `nonce` - A vector of bytes representing the nonce used for encryption.
     ///
     /// # Returns
     ///
@@ -274,12 +311,11 @@ impl PyColdKeyPair {
     ///
     /// ```python
     /// password = "my_secure_password"
-    /// nonce = b'\x01\x02\x03...'  # 24 bytes
-    /// decrypted_private_key = cold_key_pair.decrypt(password, nonce)
+    /// decrypted_private_key = cold_key_pair.decrypt(password)
     /// ```
-    fn decrypt(&self, password: &str, nonce: Vec<u8>) -> PyResult<Vec<u8>> {
+    fn decrypt(&self, password: &str) -> PyResult<Vec<u8>> {
         self.coldkeypair
-            .decrypt(password, &nonce)
+            .decrypt(password)
             .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
@@ -288,7 +324,9 @@ impl PyColdKeyPair {
     }
 
     fn ss58_address(&self) -> String {
-        self.coldkeypair.public.to_ss58check()
+        sr25519::Public::from_slice(&self.coldkeypair.public)
+            .expect("Invalid public key")
+            .to_ss58check()
     }
 }
 
@@ -325,7 +363,9 @@ impl PyHotKeyPair {
     }
 
     fn sign<'py>(&self, py: Python<'py>, message: &[u8]) -> PyResult<&'py PyBytes> {
-        let signature = self.hotkeypair.sign(message)
+        let signature = self
+            .hotkeypair
+            .sign(message)
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         Ok(PyBytes::new(py, &signature))
     }

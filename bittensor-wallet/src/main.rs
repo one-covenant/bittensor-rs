@@ -1,7 +1,10 @@
 use bittensor_wallet::{Wallet, WalletError};
 use clap::{Parser, Subcommand};
 use sp_core::crypto::Ss58Codec;
+use sp_core::sr25519;
+use sp_core::ByteArray;
 use std::path::PathBuf;
+use log::info;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -95,9 +98,9 @@ fn main() -> Result<(), WalletError> {
             words,
             password,
         } => {
-            let wallet = Wallet::new(name.clone(), path.clone())?;
+            let mut wallet = Wallet::new(name.clone(), path.clone())?;
             wallet.create_new_wallet(password)?;
-            println!("Wallet created successfully with {} words", words);
+            info!("Wallet created successfully with {} words", words);
         }
         Commands::AddHotkey {
             name,
@@ -107,7 +110,7 @@ fn main() -> Result<(), WalletError> {
         } => {
             let mut wallet = Wallet::new(wallet_name.clone(), wallet_path.clone())?;
             wallet.create_new_hotkey(name)?;
-            println!("Hotkey added successfully");
+            info!("Hotkey added successfully");
         }
         Commands::RegenerateWallet {
             name,
@@ -115,9 +118,9 @@ fn main() -> Result<(), WalletError> {
             mnemonic,
             password,
         } => {
-            let mut  wallet = Wallet::new(name.clone(), path.clone())?;
+            let mut wallet = Wallet::new(name.clone(), path.clone())?;
             wallet.regenerate_wallet(mnemonic, password)?;
-            println!("Wallet regenerated successfully");
+            info!("Wallet regenerated successfully");
         }
         Commands::ChangePassword {
             name,
@@ -126,10 +129,8 @@ fn main() -> Result<(), WalletError> {
             new_password,
         } => {
             let mut wallet = Wallet::new(name.clone(), path.clone())?;
-            tokio::runtime::Runtime::new()
-                .unwrap()
-                .block_on(wallet.change_password(old_password, new_password))?;
-            println!("Password changed successfully");
+            wallet.change_password(old_password, new_password)?;
+            info!("Password changed successfully");
         }
         Commands::GetColdkeyInfo {
             name,
@@ -138,8 +139,13 @@ fn main() -> Result<(), WalletError> {
         } => {
             let wallet = Wallet::new(name.clone(), path.clone())?;
             let coldkey = wallet.get_coldkey(password)?;
-            println!("Coldkey public key: {:?}", coldkey.public);
-            println!("Coldkey SS58 address: {}", coldkey.public.to_ss58check());
+            info!("Coldkey public key: {:?}", coldkey.public);
+            info!(
+                "Coldkey SS58 address: {}",
+                sr25519::Public::from_slice(&coldkey.public)
+                    .expect("Invalid public key")
+                    .to_ss58check()
+            );
         }
         Commands::GetHotkeyInfo {
             name,
@@ -148,8 +154,8 @@ fn main() -> Result<(), WalletError> {
         } => {
             let wallet = Wallet::new(wallet_name.clone(), wallet_path.clone())?;
             let hotkey = wallet.get_hotkey(name)?;
-            println!("Hotkey public key: {:?}", hotkey.public);
-            println!("Hotkey SS58 address: {}", hotkey.public.to_ss58check());
+            info!("Hotkey public key: {:?}", hotkey.public);
+            info!("Hotkey SS58 address: {}", hotkey.public.to_ss58check());
         }
         Commands::ShowWalletInfo {
             name,
@@ -160,17 +166,17 @@ fn main() -> Result<(), WalletError> {
 
             // Display coldkey information
             let coldkey = wallet.get_coldkey(password)?;
-            println!("Coldkey Information:");
-            println!("  Public key: {:?}", coldkey.public);
-            println!("  SS58 address: {}", coldkey.public.to_ss58check());
+            info!("Coldkey Information:");
+            info!("  Public key: {:?}", coldkey.public);
+            info!("  SS58 address: {}", sr25519::Public::from_slice(&coldkey.public).expect("Invalid public key").to_ss58check());
 
             // Display hotkey information
-            println!("\nHotkeys:");
+            info!("\nHotkeys:");
             let hotkeys = wallet.get_hotkeys()?;
             for (name, hotkey) in hotkeys {
-                println!("  Hotkey: {}", name);
-                println!("    Public key: {:?}", hotkey.public);
-                println!("    SS58 address: {}", hotkey.public.to_ss58check());
+                info!("  Hotkey: {}", name);
+                info!("    Public key: {:?}", hotkey.public);
+                info!("    SS58 address: {}", hotkey.public.to_ss58check());
             }
         }
     }

@@ -63,18 +63,20 @@ impl Wallet {
     /// * `WalletError::SerializationError` - If there's an issue serializing data.
     /// * `WalletError::EncryptionError` - If there's an issue encrypting the coldkey.
     ///
-    pub fn create_new_wallet(&self, password: &str) -> Result<(), WalletError> {
+    pub fn create_new_wallet(&mut self, password: &str) -> Result<(), WalletError> {
         // Generate a new ColdKeyPair
         let coldkey: ColdKeyPair = ColdKeyPair::generate();
 
         // Create KeyCredentials for the public part of the coldkey
         let coldkey_pub: KeyCredentials = KeyCredentials {
-            account_id: format!("0x{}", hex::encode(coldkey.public.0)),
-            public_key: format!("0x{}", hex::encode(coldkey.public.0)),
+            account_id: format!("0x{}", hex::encode(&coldkey.public)),
+            public_key: format!("0x{}", hex::encode(&coldkey.public)),
             private_key: None,
             secret_phrase: None,
             secret_seed: None,
-            ss58_address: coldkey.public.to_ss58check(),
+            ss58_address: sr25519::Public::from_slice(coldkey.public.as_slice())
+                .expect("Invalid public key")
+                .to_ss58check(),
         };
 
         // Serialize and write the public key credentials to a file
@@ -94,6 +96,9 @@ impl Wallet {
             .map_err(|e| WalletError::SerializationError(e.to_string()))?;
         std::fs::write(&coldkey_path, &encrypted_data).map_err(|e| WalletError::IoError(e))?;
         println!("Wrote coldkey to {:?}", coldkey_path);
+
+        // Set the coldkey in the wallet
+        self.coldkey = Some(encrypted_coldkey);
 
         Ok(())
     }
@@ -202,11 +207,14 @@ impl Wallet {
 
     pub fn get_coldkey(&self, password: &str) -> Result<ColdKeyPair, WalletError> {
         let coldkey = self.coldkey.as_ref().ok_or(WalletError::NoColdKey)?;
-        let decrypted_private_key: Vec<u8> = coldkey.decrypt(password, &coldkey.public)?;
+        let decrypted_private_key: Vec<u8> = coldkey.decrypt(password)?;
         Ok(ColdKeyPair::new(
-            coldkey.public,
-            decrypted_private_key,
-            false,
+            sr25519::Public::from_slice(&coldkey.public)
+                .map_err(|_| WalletError::InvalidPublicKey)?,
+            decrypted_private_key
+                .try_into()
+                .map_err(|_| WalletError::InvalidPrivateKey)?,
+            false, // Assuming the key is not encrypted at this point
         ))
     }
     /// Retrieves a HotKeyPair from the wallet by its name.
@@ -473,7 +481,13 @@ impl Wallet {
         // Create a new ColdKeyPair
         let public = pair.public();
         let private = pair.to_raw_vec();
-        let cold_keypair = ColdKeyPair::new(public, private, false); // Set is_encrypted to false
+        let cold_keypair = ColdKeyPair::new(
+            sr25519::Public::from_raw(
+                <[u8; 32]>::try_from(public.as_ref()).expect("Public key should be 32 bytes"),
+            ),
+            private.try_into().expect("Private key should be 32 bytes"),
+            false,
+        ); // Set is_encrypted to false
 
         // Encrypt the cold keypair
         let encrypted_private = cold_keypair.encrypt(password)?;
@@ -503,12 +517,14 @@ impl Wallet {
     // Helper method to save the coldkeypub information
     fn save_coldkeypub(&self, cold_keypair: &ColdKeyPair) -> Result<(), WalletError> {
         let coldkey_pub = KeyCredentials {
-            account_id: format!("0x{}", hex::encode(cold_keypair.public.0)),
-            public_key: format!("0x{}", hex::encode(cold_keypair.public.0)),
+            account_id: format!("0x{}", hex::encode(&cold_keypair.public)),
+            public_key: format!("0x{}", hex::encode(&cold_keypair.public)),
             private_key: None,
             secret_phrase: None,
             secret_seed: None,
-            ss58_address: cold_keypair.public.to_ss58check(),
+            ss58_address: sr25519::Public::from_slice(&cold_keypair.public)
+                .expect("Invalid public key")
+                .to_ss58check(),
         };
 
         let coldkey_pub_path = self.path.join("coldkeypub.txt");
@@ -534,33 +550,27 @@ impl Wallet {
     /// * `Result<(), WalletError>` - Ok(()) if successful, or an error if the operation fails.
     ///
 
-    pub async fn change_password(
+    pub fn change_password(
         &mut self,
         old_password: &str,
         new_password: &str,
     ) -> Result<(), WalletError> {
-        let mut coldkey = self.coldkey.take().ok_or(WalletError::NoColdKey)?;
+        let coldkey = self.coldkey.as_mut().ok_or(WalletError::NoColdKey)?;
 
-        match coldkey.re_encrypt(old_password, new_password) {
-            Ok(_) => {
-                self.coldkey = Some(coldkey);
-                self.save_coldkey()
-            }
-            Err(e) => {
-                // Put the coldkey back if re-encryption fails
-                self.coldkey = Some(coldkey);
-                Err(e)
-            }
-        }
+        // Change the password of the coldkey
+        coldkey.change_password(old_password, new_password)?;
+
+        // Save the updated coldkey
+        self.save_coldkey()?;
+
+        Ok(())
     }
 
     fn save_coldkey(&self) -> Result<(), WalletError> {
         let coldkey_path = self.path.join("coldkey");
-        let coldkey_json = self
-            .coldkey
-            .as_ref()
-            .ok_or(WalletError::NoColdKey)?
-            .to_json()?;
+        let coldkey_json =
+            serde_json::to_string(self.coldkey.as_ref().ok_or(WalletError::NoColdKey)?)
+                .map_err(|e| WalletError::SerializationError(e.to_string()))?;
         std::fs::write(coldkey_path, coldkey_json).map_err(WalletError::IoError)
     }
 
@@ -815,7 +825,7 @@ mod tests {
 
     #[test]
     fn test_create_new_wallet() {
-        let (wallet, _temp_dir) = create_test_wallet().expect("Failed to create test wallet");
+        let (mut wallet, _temp_dir) = create_test_wallet().expect("Failed to create test wallet");
         assert!(wallet.create_new_wallet("password123").is_ok());
     }
 
@@ -911,7 +921,7 @@ mod tests {
 
         // Attempt to change the password
         let new_password = "new_password";
-        let change_result = wallet.change_password(initial_password, new_password).await;
+        let change_result = wallet.change_password(initial_password, new_password);
 
         // Check the result of the password change operation
         match change_result {

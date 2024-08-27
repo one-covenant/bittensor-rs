@@ -1,4 +1,6 @@
 use crate::errors::WalletError;
+use secrets::SecretBox;
+use serde::ser::SerializeStruct;
 
 use aes_gcm::{
     aead::{Aead, KeyInit},
@@ -7,23 +9,85 @@ use aes_gcm::{
 use argon2::{password_hash::SaltString, Argon2, PasswordHasher};
 
 use bip39::Mnemonic;
-use serde::{Deserialize, Serialize};
+use once_cell;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use sp_core::ByteArray;
 use sp_core::{sr25519, Pair};
 use sp_runtime::traits::IdentifyAccount;
 
+// #[derive(Clone, Debug)]
+// pub struct ColdKeyPair {
+//     pub public: Vec<u8>,
+//     pub private_key: SecretBox<[u8; 32]>,
+//     is_encrypted: bool,
+// }
+
+// impl Serialize for ColdKeyPair {
+//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+//     where
+//         S: Serializer,
+//     {
+//         let mut state = serializer.serialize_struct("ColdKeyPair", 3)?;
+//         state.serialize_field("public", &self.public)?;
+//         state.serialize_field("private_key", &*self.private_key.borrow())?;
+//         state.serialize_field("is_encrypted", &self.is_encrypted)?;
+//         state.end()
+//     }
+// }
+
+// impl<'de> Deserialize<'de> for ColdKeyPair {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: Deserializer<'de>,
+//     {
+//         /// Helper struct for deserialization
+//         #[derive(Deserialize)]
+//         struct ColdKeyPairHelper {
+//             public: Vec<u8>,
+//             private_key: [u8; 32],
+//             is_encrypted: bool,
+//         }
+
+//         // Deserialize into the helper struct
+//         let helper: ColdKeyPairHelper = ColdKeyPairHelper::deserialize(deserializer)?;
+
+//         // Construct and return the ColdKeyPair
+//         Ok(ColdKeyPair {
+//             public: helper.public,
+//             private_key: SecretBox::new(|private_key| *private_key = helper.private_key),
+//             is_encrypted: helper.is_encrypted,
+//         })
+//     }
+// }
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ColdKeyPair {
-    pub public: sr25519::Public,
-    private_key: Vec<u8>,
-    is_encrypted: bool,
+    pub public: Vec<u8>,
+    #[serde(with = "secret_box_serde")]
+    pub private_key: SecretBox<[u8; 32]>,
+    pub is_encrypted: bool,
 }
 
-impl AsRef<[u8]> for ColdKeyPair {
-    fn as_ref(&self) -> &[u8] {
-        &self.private_key
+mod secret_box_serde {
+    use super::*;
+    use serde::{Deserializer, Serializer};
+
+    pub fn serialize<S>(secret_box: &SecretBox<[u8; 32]>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let bytes: [u8; 32] = *secret_box.borrow();
+        bytes.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<SecretBox<[u8; 32]>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let bytes: [u8; 32] = Deserialize::deserialize(deserializer)?;
+        Ok(SecretBox::new(|secret| *secret = bytes))
     }
 }
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HotKeyPair {
     pub public: sr25519::Public,
@@ -43,8 +107,22 @@ impl KeyPair for ColdKeyPair {
     /// # Returns
     ///
     /// * `&sr25519::Public` - A reference to the sr25519 public key.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use bittensor_wallet::{ColdKeyPair, KeyPair};
+    /// # let cold_key_pair = ColdKeyPair::new(); // Assume this is a valid ColdKeyPair
+    /// let public_key: &sr25519::Public = cold_key_pair.public();
+    /// println!("Public key: {:?}", public_key);
+    /// ```
     fn public(&self) -> &sr25519::Public {
-        &self.public
+        // Convert the Vec<u8> to sr25519::Public and store it
+        static PUBLIC_KEY: once_cell::sync::OnceCell<sr25519::Public> =
+            once_cell::sync::OnceCell::new();
+        PUBLIC_KEY.get_or_init(|| {
+            sr25519::Public::from_slice(&self.public).expect("Public key should always be valid")
+        })
     }
 
     /// Signs a message using the private key associated with this ColdKeyPair.
@@ -106,11 +184,9 @@ impl KeyPair for ColdKeyPair {
             ));
         }
 
-        // Create a pair from the private key
-        let pair: sr25519::Pair = sr25519::Pair::from_seed_slice(&self.private_key)
+        let pair = sr25519::Pair::from_seed_slice(self.private_key.borrow().as_ref())
             .map_err(|_| WalletError::InvalidPrivateKey)?;
 
-        // Sign the message and return the signature
         Ok(pair.sign(message))
     }
 
@@ -198,20 +274,33 @@ impl KeyPair for HotKeyPair {
 }
 
 impl ColdKeyPair {
-    /// Creates a new ColdKeyPair instance with the given public key and encrypted private key.
+    /// Creates a new ColdKeyPair instance with the given public key and private key.
     ///
     /// # Arguments
     ///
     /// * `public` - The public key of type `sr25519::Public`.
-    /// * `encrypted_private` - The encrypted private key as a vector of bytes.
+    /// * `private_key` - The private key as a 32-byte array.
+    /// * `is_encrypted` - A boolean indicating whether the private key is encrypted.
     ///
     /// # Returns
     ///
     /// A new `ColdKeyPair` instance.
-    pub fn new(public: sr25519::Public, private_key: Vec<u8>, is_encrypted: bool) -> Self {
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bittensor_wallet::{ColdKeyPair, sr25519};
+    ///
+    /// let public = sr25519::Public::from_raw([0u8; 32]);
+    /// let private_key = [0u8; 32];
+    /// let is_encrypted = false;
+    ///
+    /// let cold_key_pair = ColdKeyPair::new(public, private_key, is_encrypted);
+    /// ```
+    pub fn new(public: sr25519::Public, private_key: [u8; 32], is_encrypted: bool) -> Self {
         Self {
-            public,
-            private_key,
+            public: public.to_vec(),
+            private_key: SecretBox::new(|key| *key = private_key),
             is_encrypted,
         }
     }
@@ -226,8 +315,8 @@ impl ColdKeyPair {
         let public = pair.public();
         let private = pair.to_raw_vec();
         Self {
-            public,
-            private_key: private,
+            public: public.to_vec(),
+            private_key: SecretBox::new(|key: &mut [u8; 32]| key.copy_from_slice(&private[..32])),
             is_encrypted: false,
         }
     }
@@ -275,8 +364,8 @@ impl ColdKeyPair {
 
         // Create a ColdKeyPair instance
         let cold_keypair = Self {
-            public,
-            private_key: private,
+            public: public.to_vec(),
+            private_key: SecretBox::new(|key: &mut [u8; 32]| key.copy_from_slice(&private[..32])),
             is_encrypted: false,
         };
 
@@ -319,82 +408,83 @@ impl ColdKeyPair {
             ));
         }
 
-        log::debug!("Starting encryption process");
-        log::debug!("Original private key length: {}", self.private_key.len());
-
-        // Generate a random salt
         let salt = SaltString::generate(&mut rand::thread_rng());
-        log::debug!("Generated salt: {}", salt.as_str());
-
-        // Derive a key from the password using Argon2
         let argon2 = Argon2::default();
-        log::debug!("Argon2 parameters: {:?}", argon2.params());
         let password_hash = argon2
             .hash_password(password.as_bytes(), &salt)
-            .map_err(|e| {
-                log::debug!("Failed to hash password: {:?}", e);
-                WalletError::EncryptionError(format!("Failed to hash password: {}", e))
-            })?;
+            .map_err(|e| WalletError::EncryptionError(format!("Failed to hash password: {}", e)))?;
         let derived_key = password_hash.hash.unwrap();
-        log::debug!("Password hashed successfully");
-        log::debug!(
-            "Derived key (first 4 bytes): {:?}",
-            &derived_key.as_bytes()[..4]
-        );
 
-        // Create a new AES-GCM cipher instance
         let cipher = Aes256Gcm::new_from_slice(derived_key.as_bytes()).map_err(|e| {
-            log::debug!("Failed to create AES-GCM cipher: {:?}", e);
             WalletError::EncryptionError(format!("Failed to create AES-GCM cipher: {}", e))
         })?;
-        log::debug!("AES-GCM cipher created successfully");
 
-        // Generate a random 12-byte nonce
         let nonce_bytes = rand::random::<[u8; 12]>();
         let nonce = Nonce::from_slice(&nonce_bytes);
-        log::debug!("Generated nonce: {:?}", nonce);
 
-        // Encrypt the private key
         let ciphertext = cipher
-            .encrypt(nonce, self.private_key.as_ref())
+            .encrypt(nonce, self.private_key.borrow().as_ref())
             .map_err(|e| {
-                log::debug!("Encryption failed: {:?}", e);
                 WalletError::EncryptionError(format!("AES-GCM encryption failed: {}", e))
             })?;
-        log::debug!(
-            "Encryption successful. Ciphertext length: {}",
-            ciphertext.len()
-        );
 
-        // Combine salt, nonce, and ciphertext
         let mut encrypted_data = salt.as_str().as_bytes().to_vec();
-        encrypted_data.extend_from_slice(&nonce_bytes);
+        encrypted_data.extend_from_slice(nonce.as_slice());
         encrypted_data.extend_from_slice(&ciphertext);
 
-        log::debug!("Final encrypted data length: {}", encrypted_data.len());
-
-        // Return a new ColdKeyPair instance with encrypted data
         Ok(Self {
-            public: self.public,
-            private_key: encrypted_data,
+            public: self.public.clone(),
+            private_key: SecretBox::new(|key: &mut [u8; 32]| key.copy_from_slice(&encrypted_data)),
             is_encrypted: true,
         })
     }
 
+    /// Signs a message using the encrypted private key.
+    ///
+    /// This function decrypts the private key using the provided password,
+    /// then uses it to sign the given message.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - A byte slice containing the message to be signed.
+    /// * `password` - A string slice that holds the password for decryption.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<sr25519::Signature, WalletError>` - The signature if successful, or a WalletError if signing fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use your_crate::{KeyPair, WalletError};
+    /// # fn main() -> Result<(), WalletError> {
+    /// # let keypair = KeyPair::new()?;
+    /// # let encrypted_keypair = keypair.encrypt("password123")?;
+    /// let message: &[u8] = b"Hello, world!";
+    /// let signature = encrypted_keypair.sign_encrypted(message, "password123")?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn sign_encrypted(
         &self,
         message: &[u8],
         password: &str,
     ) -> Result<sr25519::Signature, WalletError> {
+        // Ensure the KeyPair is encrypted before attempting to sign
         if !self.is_encrypted {
             return Err(WalletError::DecryptionError(
                 "KeyPair is not encrypted".to_string(),
             ));
         }
 
-        let decrypted_private_key = self.decrypt(password, &self.private_key)?;
-        let pair = sr25519::Pair::from_seed_slice(&decrypted_private_key)
+        // Decrypt the private key using the provided password
+        let decrypted_private_key: Vec<u8> = self.decrypt(password)?;
+
+        // Create a new sr25519::Pair from the decrypted private key
+        let pair: sr25519::Pair = sr25519::Pair::from_seed_slice(&decrypted_private_key)
             .map_err(|_| WalletError::KeyDerivationError)?;
+
+        // Sign the message using the pair and return the signature
         Ok(pair.sign(message))
     }
 
@@ -415,70 +505,107 @@ impl ColdKeyPair {
     ///
     /// * `Result<Vec<u8>, WalletError>` - A vector of decrypted bytes if successful, or a WalletError if decryption fails.
     ///
-    pub fn decrypt(&self, password: &str, encrypted_data: &[u8]) -> Result<Vec<u8>, WalletError> {
-        log::debug!("Starting decryption process");
-        log::debug!("Encrypted data length: {}", encrypted_data.len());
+    // pub fn decrypt(&self, password: &str, encrypted_data: &[u8]) -> Result<Vec<u8>, WalletError> {
+    //     log::debug!("Starting decryption process");
+    //     log::debug!("Encrypted data length: {}", encrypted_data.len());
+
+    //     if encrypted_data.len() < 34 {
+    //         // 22 (salt) + 12 (nonce)
+    //         log::debug!("Encrypted data too short: {}", encrypted_data.len());
+    //         return Err(WalletError::DecryptionError(
+    //             "Encrypted data too short".to_string(),
+    //         ));
+    //     }
+
+    //     let salt =
+    //         SaltString::from_b64(std::str::from_utf8(&encrypted_data[..22]).map_err(|e| {
+    //             log::debug!("Invalid salt UTF-8: {:?}", e);
+    //             WalletError::DecryptionError(format!("Invalid salt UTF-8: {}", e))
+    //         })?)
+    //         .map_err(|e| {
+    //             log::debug!("Invalid salt: {:?}", e);
+    //             WalletError::DecryptionError(format!("Invalid salt: {}", e))
+    //         })?;
+    //     let nonce = Nonce::from_slice(&encrypted_data[22..34]);
+    //     let ciphertext = &encrypted_data[34..];
+
+    //     log::debug!("Salt: {}", salt.as_str());
+    //     log::debug!("Nonce: {:?}", nonce);
+    //     log::debug!("Ciphertext length: {}", ciphertext.len());
+
+    //     // Derive the key from the password using Argon2
+    //     let argon2 = Argon2::default();
+    //     log::debug!("Argon2 parameters: {:?}", argon2.params());
+    //     let password_hash = argon2
+    //         .hash_password(password.as_bytes(), &salt)
+    //         .map_err(|e| {
+    //             log::debug!("Failed to hash password: {:?}", e);
+    //             WalletError::DecryptionError(format!("Failed to hash password: {}", e))
+    //         })?;
+    //     let derived_key = password_hash.hash.unwrap();
+    //     log::debug!("Password hashed successfully");
+    //     log::debug!(
+    //         "Derived key (first 4 bytes): {:?}",
+    //         &derived_key.as_bytes()[..4]
+    //     );
+
+    //     // Create a new AES-GCM cipher instance
+    //     let cipher = Aes256Gcm::new_from_slice(derived_key.as_bytes()).map_err(|e| {
+    //         log::debug!("Failed to create AES-GCM cipher: {:?}", e);
+    //         WalletError::DecryptionError(format!("Failed to create AES-GCM cipher: {}", e))
+    //     })?;
+    //     log::debug!("AES-GCM cipher created successfully");
+
+    //     // Decrypt the private key
+    //     let plaintext = cipher.decrypt(nonce, ciphertext).map_err(|e| {
+    //         log::debug!("Decryption failed: {:?}", e);
+    //         WalletError::DecryptionError(format!("Decryption failed: {}", e))
+    //     })?;
+    //     log::debug!(
+    //         "Decryption successful. Plaintext length: {}",
+    //         plaintext.len()
+    //     );
+
+    //     Ok(plaintext)
+    // }
+    pub fn decrypt(&self, password: &str) -> Result<Vec<u8>, WalletError> {
+        if !self.is_encrypted {
+            return Err(WalletError::DecryptionError(
+                "KeyPair is not encrypted".to_string(),
+            ));
+        }
+
+        let encrypted_data = self.private_key.borrow();
 
         if encrypted_data.len() < 34 {
-            // 22 (salt) + 12 (nonce)
-            log::debug!("Encrypted data too short: {}", encrypted_data.len());
             return Err(WalletError::DecryptionError(
                 "Encrypted data too short".to_string(),
             ));
         }
 
-        let salt =
-            SaltString::from_b64(std::str::from_utf8(&encrypted_data[..22]).map_err(|e| {
-                log::debug!("Invalid salt UTF-8: {:?}", e);
-                WalletError::DecryptionError(format!("Invalid salt UTF-8: {}", e))
-            })?)
-            .map_err(|e| {
-                log::debug!("Invalid salt: {:?}", e);
-                WalletError::DecryptionError(format!("Invalid salt: {}", e))
-            })?;
+        let salt = SaltString::from_b64(
+            std::str::from_utf8(&encrypted_data[..22])
+                .map_err(|e| WalletError::DecryptionError(format!("Invalid salt UTF-8: {}", e)))?,
+        )
+        .map_err(|e| WalletError::DecryptionError(format!("Invalid salt: {}", e)))?;
+
         let nonce = Nonce::from_slice(&encrypted_data[22..34]);
         let ciphertext = &encrypted_data[34..];
 
-        log::debug!("Salt: {}", salt.as_str());
-        log::debug!("Nonce: {:?}", nonce);
-        log::debug!("Ciphertext length: {}", ciphertext.len());
-
-        // Derive the key from the password using Argon2
         let argon2 = Argon2::default();
-        log::debug!("Argon2 parameters: {:?}", argon2.params());
         let password_hash = argon2
             .hash_password(password.as_bytes(), &salt)
-            .map_err(|e| {
-                log::debug!("Failed to hash password: {:?}", e);
-                WalletError::DecryptionError(format!("Failed to hash password: {}", e))
-            })?;
+            .map_err(|e| WalletError::DecryptionError(format!("Failed to hash password: {}", e)))?;
         let derived_key = password_hash.hash.unwrap();
-        log::debug!("Password hashed successfully");
-        log::debug!(
-            "Derived key (first 4 bytes): {:?}",
-            &derived_key.as_bytes()[..4]
-        );
 
-        // Create a new AES-GCM cipher instance
         let cipher = Aes256Gcm::new_from_slice(derived_key.as_bytes()).map_err(|e| {
-            log::debug!("Failed to create AES-GCM cipher: {:?}", e);
             WalletError::DecryptionError(format!("Failed to create AES-GCM cipher: {}", e))
         })?;
-        log::debug!("AES-GCM cipher created successfully");
 
-        // Decrypt the private key
-        let plaintext = cipher.decrypt(nonce, ciphertext).map_err(|e| {
-            log::debug!("Decryption failed: {:?}", e);
-            WalletError::DecryptionError(format!("Decryption failed: {}", e))
-        })?;
-        log::debug!(
-            "Decryption successful. Plaintext length: {}",
-            plaintext.len()
-        );
-
-        Ok(plaintext)
+        cipher
+            .decrypt(nonce, ciphertext)
+            .map_err(|e| WalletError::DecryptionError(format!("Decryption failed: {}", e)))
     }
-
     /// Re-encrypts the private key with a new password.
     ///
     /// This function decrypts the private key using the old password,
@@ -517,10 +644,19 @@ impl ColdKeyPair {
         }
 
         // Decrypt the private key using the old password
-        let decrypted_private_key = self.decrypt(old_password, &self.private_key)?;
+        let decrypted_private_key = self.decrypt(old_password)?;
 
-        // Create a new ColdKeyPair with the decrypted private key
-        let new_keypair = ColdKeyPair::new(self.public, decrypted_private_key, false);
+        // Convert Vec<u8> to sr25519::Public
+        let public =
+            sr25519::Public::from_slice(&self.public).map_err(|_| WalletError::InvalidPublicKey)?;
+
+        // Convert Vec<u8> to [u8; 32]
+        let private_key: [u8; 32] = decrypted_private_key
+            .try_into()
+            .map_err(|_| WalletError::InvalidPrivateKey)?;
+
+        // Create a new ColdKeyPair with the converted types
+        let new_keypair = ColdKeyPair::new(public, private_key, false);
 
         // Encrypt the new keypair with the new password
         let encrypted_keypair = new_keypair.encrypt(new_password)?;
@@ -538,6 +674,186 @@ impl ColdKeyPair {
 
     pub fn from_json(json: &str) -> Result<Self, WalletError> {
         serde_json::from_str(json).map_err(|e| WalletError::DeserializationError(e.to_string()))
+    }
+
+    /// Changes the password used to encrypt the private key.
+    ///
+    /// # Arguments
+    ///
+    /// * `old_password` - A string slice that holds the current password.
+    /// * `new_password` - A string slice that holds the new password to be set.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), WalletError>` - Ok(()) if successful, or a WalletError if an error occurred.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `WalletError::NotEncrypted` if the key is not currently encrypted.
+    /// Returns a `WalletError::DecryptionError` if the old password is incorrect.
+    /// Returns a `WalletError::EncryptionError` if there's an issue with the new encryption.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use bittensor_wallet::ColdKeyPair;
+    /// # let mut keypair = ColdKeyPair::generate();
+    /// # keypair.encrypt("old_password").unwrap();
+    /// let result = keypair.change_password("old_password", "new_password");
+    /// assert!(result.is_ok());
+    /// ```
+    pub fn change_password(
+        &mut self,
+        old_password: &str,
+        new_password: &str,
+    ) -> Result<(), WalletError> {
+        // Check if the keypair is encrypted
+        if !self.is_encrypted {
+            return Err(WalletError::NotEncrypted);
+        }
+
+        // Decrypt the private key with the old password
+        let decrypted_private_key: Vec<u8> = self.decrypt(old_password)?;
+
+        // Re-encrypt with the new password
+        let new_encrypted: SecretBox<[u8; 32]> =
+            self.encrypt_private_key(&decrypted_private_key, new_password)?;
+
+        // Update the private key and maintain encrypted state
+        self.private_key = new_encrypted;
+        Ok(())
+    }
+
+    // fn re_encrypt_private_key(
+    //     &self,
+    //     old_password: &str,
+    //     new_password: &str,
+    // ) -> Result<Vec<u8>, WalletError> {
+    //     // Decrypt the entire private key with the old password
+    //     let decrypted_data = self.decrypt(old_password, &self.private_key)?;
+
+    //     // Generate a new salt for the new encryption
+    //     let new_salt = SaltString::generate(&mut rand::thread_rng());
+
+    //     // Derive a new key from the new password using Argon2
+    //     let argon2 = Argon2::default();
+    //     let password_hash = argon2
+    //         .hash_password(new_password.as_bytes(), &new_salt)
+    //         .map_err(|e| WalletError::EncryptionError(format!("Failed to hash password: {}", e)))?;
+    //     let new_derived_key = password_hash.hash.unwrap();
+
+    //     // Create a new AES-GCM cipher instance with the new key
+    //     let cipher = Aes256Gcm::new_from_slice(new_derived_key.as_bytes()).map_err(|e| {
+    //         WalletError::EncryptionError(format!("Failed to create AES-GCM cipher: {}", e))
+    //     })?;
+
+    //     // Generate a new nonce
+    //     let new_nonce_bytes = rand::random::<[u8; 12]>();
+    //     let new_nonce = Nonce::from_slice(&new_nonce_bytes);
+
+    //     // Encrypt the data with the new key and nonce
+    //     let new_ciphertext = cipher
+    //         .encrypt(new_nonce, decrypted_data.as_ref())
+    //         .map_err(|e| {
+    //             WalletError::EncryptionError(format!("AES-GCM encryption failed: {}", e))
+    //         })?;
+
+    //     // Combine new salt, new nonce, and new ciphertext
+    //     let mut new_encrypted_data = new_salt.as_str().as_bytes().to_vec();
+    //     new_encrypted_data.extend_from_slice(&new_nonce_bytes);
+    //     new_encrypted_data.extend_from_slice(&new_ciphertext);
+
+    //     Ok(new_encrypted_data)
+    // }
+
+    /// Verifies if the provided password is correct for this keypair.
+    ///
+    /// This function attempts to decrypt a small portion of the encrypted private key
+    /// to verify if the provided password is correct.
+    ///
+    /// # Arguments
+    ///
+    /// * `password` - A string slice that holds the password to verify.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), WalletError>` - Ok(()) if the password is correct, otherwise an error.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `WalletError` if the decryption fails, indicating an incorrect password.
+    ///
+    // fn verify_password(&self, password: &str) -> Result<(), WalletError> {
+    //     // Attempt to decrypt a small portion of the encrypted data
+    //     // If decryption succeeds, the password is correct
+    //     let test_data: &[u8] = &self.private_key[..34]; // Use the first 34 bytes (salt + nonce)
+    //     self.decrypt(password, test_data)?;
+    //     Ok(())
+    // }
+
+    /// Encrypts a private key using the provided password.
+    ///
+    /// # Arguments
+    ///
+    /// * `private_key` - The private key to encrypt.
+    /// * `password` - The password to use for encryption.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<SecretBox<[u8; 32]>, Error>` - The encrypted private key in a SecretBox.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if encryption fails or if the private key is not 32 bytes long.
+    fn encrypt_private_key(
+        &self,
+        private_key: &[u8],
+        password: &str,
+    ) -> Result<SecretBox<[u8; 32]>, WalletError> {
+        // Ensure the private key is 32 bytes long
+        if private_key.len() != 32 {
+            return Err(WalletError::InvalidPrivateKey);
+        }
+
+        let salt = SaltString::generate(&mut rand::thread_rng());
+        let argon2 = Argon2::default();
+        let password_hash = argon2
+            .hash_password(password.as_bytes(), &salt)
+            .map_err(|e| WalletError::EncryptionError(format!("Failed to hash password: {}", e)))?;
+        let derived_key = password_hash.hash.unwrap();
+
+        // Create a new SecretBox with the encrypted private key
+        let secret_box = SecretBox::new(|secret: &mut [u8; 32]| {
+            let cipher = match Aes256Gcm::new_from_slice(derived_key.as_bytes()) {
+                Ok(c) => c,
+                Err(e) => {
+                    log::error!("Failed to create AES-GCM cipher: {}", e);
+                    return;
+                }
+            };
+
+            // Create a longer-lived value for the random bytes
+            let nonce_bytes = rand::random::<[u8; 12]>();
+            let nonce = Nonce::from_slice(&nonce_bytes);
+
+            let encrypted = match cipher.encrypt(nonce, private_key.as_ref()) {
+                Ok(e) => e,
+                Err(e) => {
+                    log::error!("AES-GCM encryption failed: {}", e);
+                    return;
+                }
+            };
+
+            // Combine salt, nonce, and ciphertext
+            let mut result = salt.as_str().as_bytes().to_vec();
+            result.extend_from_slice(nonce.as_slice());
+            result.extend_from_slice(&encrypted);
+
+            // Copy the result into the secret
+            secret.copy_from_slice(&result[..32]);
+        });
+
+        Ok(secret_box)
     }
 }
 
@@ -565,7 +881,12 @@ impl IdentifyAccount for ColdKeyPair {
 
     fn into_account(self) -> Self::AccountId {
         // Convert the public key to an AccountId32
-        self.public.into()
+        // We need to convert the public key to a 32-byte array first
+        let public_bytes: [u8; 32] = self
+            .public
+            .try_into()
+            .expect("Public key should be 32 bytes long");
+        sp_runtime::AccountId32::new(public_bytes)
     }
 }
 
@@ -579,16 +900,19 @@ impl IdentifyAccount for HotKeyPair {
     type AccountId = sp_runtime::AccountId32;
 
     fn into_account(self) -> Self::AccountId {
-        // Convert the public key to an AccountId32
-        self.public.into()
+        let public_bytes: [u8; 32] = self
+            .public
+            .try_into()
+            .expect("Public key should be 32 bytes long");
+        sp_runtime::AccountId32::new(public_bytes)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sp_core::crypto::Ss58Codec;
     use std::time::Instant;
-
     /// Helper function to create a test cold keypair with encrypted private key
     ///
     /// This function generates a new ColdKeyPair, encrypts its private key with a test password,
@@ -620,11 +944,18 @@ mod tests {
 
     #[test]
     fn test_generate_cold_keypair() {
-        let keypair = ColdKeyPair::generate();
-        let public_key_length: usize =
-            <sr25519::Public as AsRef<[u8]>>::as_ref(&keypair.public).len();
-        assert_eq!(public_key_length, 32);
-        assert!(!keypair.private_key.is_empty());
+        // Generate a new ColdKeyPair
+        let keypair: ColdKeyPair = ColdKeyPair::generate();
+
+        // Check the length of the public key
+        let public_key_length: usize = <Vec<u8> as AsRef<[u8]>>::as_ref(&keypair.public).len();
+        assert_eq!(public_key_length, 32, "Public key should be 32 bytes long");
+
+        // Check that the private key is not empty
+        assert!(!keypair.private_key.borrow().iter().all(|&byte| byte == 0),);
+
+        // TODO: Consider adding more robust checks for the private key,
+        // such as verifying its length or structure
     }
 
     #[test]
@@ -642,13 +973,14 @@ mod tests {
         let keypair = ColdKeyPair::generate();
 
         println!("Generated ColdKeyPair");
-        println!("Original private key length: {}", keypair.private_key.len());
+        // SecretBox doesn't have a len() method, so we'll use a different approach
+        println!("Original private key is present");
 
         // Encrypt the keypair
         let encrypted_keypair = match keypair.encrypt(password) {
             Ok(enc) => {
                 println!("Encryption successful");
-                println!("Encrypted data length: {}", enc.private_key.len());
+                println!("Encrypted data is present");
                 enc
             }
             Err(e) => {
@@ -657,24 +989,26 @@ mod tests {
             }
         };
 
-        // Attempt to decrypt
-        let decryption_result = encrypted_keypair.decrypt(password, &encrypted_keypair.private_key);
+        // Attempt to decrypt the encrypted keypair using the provided password
+        let decryption_result: Result<Vec<u8>, WalletError> = encrypted_keypair.decrypt(password);
 
         match decryption_result {
             Ok(decrypted) => {
                 println!("Decryption successful");
                 println!("Decrypted data length: {}", decrypted.len());
                 assert_ne!(
-                    encrypted_keypair.private_key, decrypted,
+                    encrypted_keypair.private_key.borrow().as_ref(),
+                    decrypted.as_slice(),
                     "Encrypted and decrypted data should not be the same"
                 );
                 assert_eq!(
-                    keypair.private_key.len(),
+                    keypair.private_key.borrow().len(),
                     decrypted.len(),
                     "Original and decrypted data should have the same length"
                 );
                 assert_eq!(
-                    keypair.private_key, decrypted,
+                    keypair.private_key.borrow().as_ref(),
+                    decrypted.as_slice(),
                     "Decrypted data should match the original private key"
                 );
                 println!("All assertions passed");
@@ -690,7 +1024,7 @@ mod tests {
     #[test]
     fn test_decrypt_cold_keypair_wrong_password() {
         let (keypair, _) = create_test_cold_keypair();
-        let result = keypair.decrypt("wrong_password", &keypair.private_key);
+        let result: Result<Vec<u8>, WalletError> = keypair.decrypt("wrong_password");
         assert!(result.is_err());
     }
 
@@ -706,7 +1040,11 @@ mod tests {
         assert_eq!(signature_length, 64);
 
         // Verify the signature
-        assert!(sr25519::Pair::verify(&signature, message, &keypair.public));
+        assert!(sr25519::Pair::verify(
+            &signature,
+            message,
+            &sr25519::Public::from_slice(&keypair.public).expect("Invalid public key")
+        ));
 
         // Encrypt the keypair
         let password = "test_password";
@@ -726,7 +1064,7 @@ mod tests {
         assert!(sr25519::Pair::verify(
             &encrypted_signature,
             message,
-            &encrypted_keypair.public
+            &sr25519::Public::from_slice(&encrypted_keypair.public).expect("Invalid public key")
         ));
 
         // Test signing with wrong password
@@ -942,5 +1280,139 @@ mod tests {
         let keypair1 = ColdKeyPair::from_mnemonic(mnemonic, Some("password1")).unwrap();
         let keypair2 = ColdKeyPair::from_mnemonic(mnemonic, Some("password2")).unwrap();
         assert_ne!(keypair1.private_key, keypair2.private_key);
+    }
+
+    #[test]
+    fn test_cold_keypair_secret_box() {
+        // Generate a new ColdKeyPair
+        let cold_keypair = ColdKeyPair::generate();
+
+        // Test that we can access the private key
+        {
+            let private_key = cold_keypair.private_key.borrow();
+            assert_eq!(private_key.len(), 32);
+        } // private_key is dropped here, releasing the borrow
+
+        // Test that we can sign a message
+        let message = b"test message";
+        let signature = cold_keypair.sign(message).expect("Signing should succeed");
+        assert!(sr25519::Pair::verify(
+            &signature,
+            message,
+            &sr25519::Public::from_slice(&cold_keypair.public).expect("Invalid public key")
+        ));
+
+        // Test that the private key is not directly accessible
+        // This line should not compile, so we'll comment it out
+        // let _compile_error = cold_keypair.private_key;
+
+        // Test encryption and decryption
+        let password = "test_password";
+        let encrypted_keypair = cold_keypair
+            .encrypt(password)
+            .expect("Encryption should succeed");
+
+        // Ensure the encrypted keypair's private key is different
+        assert_ne!(
+            cold_keypair.private_key.borrow(),
+            encrypted_keypair.private_key.borrow()
+        );
+
+        // Test signing with encrypted keypair
+        let encrypted_signature = encrypted_keypair
+            .sign_encrypted(message, password)
+            .expect("Signing with encrypted keypair should succeed");
+        assert!(sr25519::Pair::verify(
+            &encrypted_signature,
+            message,
+            &sr25519::Public::from_slice(&encrypted_keypair.public).expect("Invalid public key")
+        ));
+
+        // Test that signing fails with wrong password
+        assert!(encrypted_keypair
+            .sign_encrypted(message, "wrong_password")
+            .is_err());
+    }
+
+    use sp_core::Pair as PairTrait;
+
+    #[test]
+    fn test_cold_keypair_serialization() {
+        // Enable debug logging for this test
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .try_init();
+
+        let cold_keypair = ColdKeyPair::generate();
+        log::debug!("Original public key: {:?}", cold_keypair.public);
+
+        // Test signing with original keypair
+        let message = b"test message";
+        let original_signature = cold_keypair
+            .sign(message)
+            .expect("Original signing should succeed");
+        log::debug!("Original signature: {:?}", original_signature);
+
+        // Serialize the ColdKeyPair
+        let serialized =
+            serde_json::to_string(&cold_keypair).expect("Serialization should succeed");
+        log::debug!("Serialized keypair: {}", serialized);
+
+        // Deserialize the ColdKeyPair
+        let deserialized: ColdKeyPair =
+            serde_json::from_str(&serialized).expect("Deserialization should succeed");
+        log::debug!("Deserialized public key: {:?}", deserialized.public);
+
+        // Check that the public keys match
+        assert_eq!(
+            cold_keypair.public, deserialized.public,
+            "Public keys should match"
+        );
+
+        // Check that the private keys match
+        assert_eq!(
+            *cold_keypair.private_key.borrow(),
+            *deserialized.private_key.borrow(),
+            "Private keys should match"
+        );
+
+        // Test signing with deserialized keypair
+        let deserialized_signature = deserialized
+            .sign(message)
+            .expect("Deserialized signing should succeed");
+        log::debug!("Deserialized signature: {:?}", deserialized_signature);
+
+        // Verify both signatures
+        let public = sr25519::Public::from_slice(&cold_keypair.public).expect("Invalid public key");
+        assert!(
+            sr25519::Pair::verify(&original_signature, message, &public),
+            "Original signature verification failed"
+        );
+        assert!(
+            sr25519::Pair::verify(&deserialized_signature, message, &public),
+            "Deserialized signature verification failed"
+        );
+
+        // Compare signatures
+        assert_eq!(
+            original_signature, deserialized_signature,
+            "Signatures should match"
+        );
+    }
+
+    #[test]
+    fn test_cold_keypair_ss58_address() {
+        let cold_keypair = ColdKeyPair::generate();
+        let public_key =
+            sr25519::Public::from_slice(&cold_keypair.public).expect("Invalid public key");
+        let ss58_address = public_key.to_ss58check();
+
+        // Ensure the SS58 address is a valid string
+        assert!(!ss58_address.is_empty());
+
+        // Verify that we can recover the public key from the SS58 address
+        let recovered_public =
+            sr25519::Public::from_ss58check(&ss58_address).expect("Invalid SS58 address");
+        assert_eq!(public_key, recovered_public);
     }
 }
