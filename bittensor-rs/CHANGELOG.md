@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0](https://github.com/one-covenant/bittensor-rs/compare/bittensor-rs-v0.1.0...bittensor-rs-v0.2.0) (2025-12-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* initial sdk release
+
+### Features
+
+* cleaner subtensor api ([b31e0fb](https://github.com/one-covenant/bittensor-rs/commit/b31e0fb60397eccbf04dd37e8958177fa6b1d9cc))
+* copy crate over ([a61127a](https://github.com/one-covenant/bittensor-rs/commit/a61127a9f000813382f7f45b949696349d4d7a6c))
+* fix ([8696c31](https://github.com/one-covenant/bittensor-rs/commit/8696c31cec4ecb753e5d046f74f141c179bfcc83))
+* initial release ([646d1b9](https://github.com/one-covenant/bittensor-rs/commit/646d1b9624256a36824d2a687c627b5ac77e6376))
+* initial sdk release ([2238634](https://github.com/one-covenant/bittensor-rs/commit/22386349100fc227e09108193dfdf928a4e219ed))
+* wallet tested , lightning tensor compiles ([7e51e22](https://github.com/one-covenant/bittensor-rs/commit/7e51e22cb294d1036fc42f9e1cfb9e72a6fe7600))
+
+
+### Bug Fixes
+
+* fix workspace deps ([1fbf152](https://github.com/one-covenant/bittensor-rs/commit/1fbf1522db81b91be7d4b6d5279ee311f46ba832))
+
 ## [Unreleased]
 
 ## [0.1.0] - Initial Release
@@ -58,4 +79,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [Unreleased]: https://github.com/one-covenant/bittensor-rs/compare/bittensor-rs-v0.1.0...HEAD
 [0.1.0]: https://github.com/one-covenant/bittensor-rs/releases/tag/bittensor-rs-v0.1.0
-
