@@ -9,7 +9,7 @@ use crate::error::BittensorError;
 use crate::types::Hotkey;
 use crate::AccountId;
 use std::str::FromStr;
-use subxt::ext::sp_core::{sr25519, Pair};
+use sp_core::{sr25519, Pair};
 
 // Weight-related types
 
@@ -158,7 +158,7 @@ pub fn verify_bittensor_signature(
 
     let signature = sr25519::Signature::from_raw(signature_array);
 
-    use subxt::ext::sp_runtime::traits::Verify;
+    use sp_runtime::traits::Verify;
 
     let public_key = sr25519::Public::from_raw(account_id.0);
     let is_valid = signature.verify(data, &public_key);
@@ -299,7 +299,7 @@ mod tests {
 
     #[test]
     fn test_sign_and_verify() {
-        use subxt::ext::sp_core::Pair;
+        use sp_core::Pair;
 
         // Generate a keypair
         let (pair, _) = sr25519::Pair::generate();
@@ -309,14 +309,14 @@ mod tests {
         let signature = sign_with_keypair(&pair, message);
 
         // Verify using sp_runtime
-        use subxt::ext::sp_runtime::traits::Verify;
+        use sp_runtime::traits::Verify;
         let public = pair.public();
         assert!(signature.verify(message.as_slice(), &public));
     }
 
     #[test]
     fn test_sign_message_hex() {
-        use subxt::ext::sp_core::Pair;
+        use sp_core::Pair;
 
         let (pair, _) = sr25519::Pair::generate();
         let message = b"test message";

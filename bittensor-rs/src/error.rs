@@ -389,8 +389,8 @@ impl From<std::io::Error> for BittensorError {
 }
 
 // Enhanced conversions from sp_core errors (used by crabtensor for keys)
-impl From<subxt::ext::sp_core::crypto::SecretStringError> for BittensorError {
-    fn from(err: subxt::ext::sp_core::crypto::SecretStringError) -> Self {
+impl From<sp_core::crypto::SecretStringError> for BittensorError {
+    fn from(err: sp_core::crypto::SecretStringError) -> Self {
         BittensorError::KeyDerivationError {
             message: format!("Key derivation failed: {err}"),
         }

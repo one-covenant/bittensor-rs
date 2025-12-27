@@ -29,7 +29,7 @@ use crate::error::BittensorError;
 use crate::types::Hotkey;
 use crate::AccountId;
 use std::path::{Path, PathBuf};
-use subxt::ext::sp_core::{sr25519, Pair};
+use sp_core::{sr25519, Pair};
 
 /// Bittensor wallet for managing keys and signing transactions
 ///
@@ -339,7 +339,7 @@ impl Wallet {
     /// let signer = wallet.signer();
     /// ```
     pub fn signer(&self) -> WalletSigner {
-        WalletSigner::new(self.hotkey_pair.clone())
+        WalletSigner::from_sp_core_pair(self.hotkey_pair.clone())
     }
 
     /// Get the underlying keypair (for advanced usage)
@@ -377,7 +377,7 @@ impl Wallet {
         sig_array.copy_from_slice(signature);
         let sig = sr25519::Signature::from_raw(sig_array);
 
-        use subxt::ext::sp_runtime::traits::Verify;
+        use sp_runtime::traits::Verify;
         sig.verify(data, &self.hotkey_pair.public())
     }
 

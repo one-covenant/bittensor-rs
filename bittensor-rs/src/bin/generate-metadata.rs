@@ -1,6 +1,6 @@
 //! Tool to generate metadata files for different Bittensor networks
 //!
-//! Usage: cargo run --bin generate-metadata -- [network]
+//! Usage: cargo run --bin generate-metadata --features generate-metadata -- [network]
 //!
 //! Networks: finney, test, local
 
@@ -10,10 +10,8 @@ use std::io::Write;
 use std::process::{Command, Stdio};
 
 use parity_scale_codec::Decode;
-use subxt_codegen::syn::parse_quote;
 use subxt_codegen::CodegenBuilder;
 use subxt_metadata::Metadata;
-use subxt_utils_fetchmetadata::{self as fetch_metadata, MetadataVersion};
 
 #[tokio::main]
 async fn main() {
@@ -42,7 +40,7 @@ async fn main() {
         }
         _ => {
             eprintln!("Unknown network: {network}");
-            eprintln!("Usage: cargo run --bin generate-metadata -- [network]");
+            eprintln!("Usage: cargo run --bin generate-metadata --features generate-metadata -- [network]");
             eprintln!("Networks: finney, test, local, all");
             std::process::exit(1);
         }
@@ -52,33 +50,26 @@ async fn main() {
 async fn generate_metadata(network: &str, endpoint: &str) {
     println!("Generating metadata for {network} network from {endpoint}");
 
-    // Fetch metadata from the chain
-    let metadata_bytes: Vec<u8> =
-        match fetch_metadata::from_url(endpoint.try_into().unwrap(), MetadataVersion::Latest).await
-        {
-            Ok(bytes) => bytes,
-            Err(e) => {
-                eprintln!("Failed to fetch metadata for {network}: {e}");
-                return;
-            }
-        };
+    // Fetch metadata using subxt CLI approach - download the scale bytes
+    let metadata_bytes = match fetch_metadata_bytes(endpoint).await {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            eprintln!("Failed to fetch metadata for {network}: {e}");
+            return;
+        }
+    };
 
-    let mut metadata_bytes: &[u8] = &metadata_bytes;
-    let metadata = Metadata::decode(&mut metadata_bytes).expect("Failed to decode metadata");
+    // Decode the metadata
+    let metadata = match Metadata::decode(&mut &metadata_bytes[..]) {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("Failed to decode metadata for {network}: {e}");
+            return;
+        }
+    };
 
-    // Generate code with same configuration as crabtensor
-    let mut codegen = CodegenBuilder::new();
-    codegen.set_additional_global_derives(vec![parse_quote!(Clone)]);
-    codegen.add_derives_for_type(
-        parse_quote!(pallet_subtensor::rpc_info::neuron_info::NeuronInfoLite),
-        vec![
-            parse_quote!(serde::Deserialize),
-            parse_quote!(serde::Serialize),
-        ],
-        true,
-    );
-
-    let code = codegen
+    // Generate code
+    let code = CodegenBuilder::new()
         .generate(metadata)
         .expect("Failed to generate code from metadata");
 
@@ -109,3 +100,17 @@ async fn generate_metadata(network: &str, endpoint: &str) {
 
     println!("Generated metadata for {network} network at {output_path}");
 }
+
+async fn fetch_metadata_bytes(url: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    use subxt::backend::rpc::RpcClient;
+    use subxt::backend::legacy::LegacyRpcMethods;
+    use subxt::PolkadotConfig;
+    
+    // Connect via RPC and fetch raw metadata bytes
+    let rpc_client = RpcClient::from_insecure_url(url).await?;
+    let rpc = LegacyRpcMethods::<PolkadotConfig>::new(rpc_client);
+    let metadata_response = rpc.state_get_metadata(None).await?;
+    // Convert the response to bytes
+    Ok(metadata_response.into_raw())
+}
+

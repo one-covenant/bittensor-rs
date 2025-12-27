@@ -122,7 +122,7 @@ impl CommitRevealParams {
 
 /// Compute the commit hash for weights
 fn compute_commit_hash(uids: &[u16], weights: &[u16], salt: &[u16], version_key: u64) -> [u8; 32] {
-    use subxt::ext::sp_core::keccak_256;
+    use sp_core::keccak_256;
 
     let mut data = Vec::new();
 

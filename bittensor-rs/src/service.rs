@@ -21,12 +21,9 @@ use std::time::Duration;
 use tracing::{debug, info, warn};
 
 // Use subxt directly with our generated API
-use subxt::PolkadotConfig;
+use subxt_signer::sr25519::Keypair;
 
 // Type alias for our chain client removed; Service uses pooled clients via connect::pool
-
-// Type alias for Signer
-type Signer = subxt::tx::PairSigner<PolkadotConfig, subxt::ext::sp_core::sr25519::Pair>;
 
 // Wallet helper functions
 fn home_hotkey_location(wallet_name: &str, hotkey_name: &str) -> Option<PathBuf> {
@@ -58,25 +55,13 @@ fn load_key_seed(path: &PathBuf) -> Result<String, Box<dyn std::error::Error>> {
     Ok(content.trim().to_string())
 }
 
-fn signer_from_seed(seed: &str) -> Result<Signer, Box<dyn std::error::Error>> {
-    use subxt::ext::sp_core::Pair;
-
-    // Try to create pair from string (could be mnemonic or hex seed)
-    let pair = if let Some(stripped) = seed.strip_prefix("0x") {
-        // It's a hex seed
-        let seed_bytes = hex::decode(stripped)?;
-        if seed_bytes.len() != 32 {
-            return Err("Invalid seed length".into());
-        }
-        let mut seed_array = [0u8; 32];
-        seed_array.copy_from_slice(&seed_bytes);
-        subxt::ext::sp_core::sr25519::Pair::from_seed(&seed_array)
-    } else {
-        // It's a mnemonic phrase
-        subxt::ext::sp_core::sr25519::Pair::from_string(seed, None)?
-    };
-
-    Ok(subxt::tx::PairSigner::new(pair))
+fn signer_from_seed(seed: &str) -> Result<Keypair, Box<dyn std::error::Error + Send + Sync>> {
+    use subxt_signer::SecretUri;
+    
+    // Parse the seed as a SecretUri (handles mnemonic, hex seeds, etc.)
+    let uri: SecretUri = seed.parse()?;
+    let keypair = Keypair::from_uri(&uri)?;
+    Ok(keypair)
 }
 
 // Import the metagraph types
@@ -87,7 +72,7 @@ pub struct Service {
     config: BittensorConfig,
     connection_pool: Arc<ConnectionPool>,
     connection_manager: Arc<ConnectionManager>,
-    signer: Signer,
+    signer: Keypair,
     retry_node: RetryNode,
     circuit_breaker: Arc<tokio::sync::Mutex<CircuitBreaker>>,
     health_monitor_handle: Option<tokio::task::JoinHandle<()>>,
@@ -708,8 +693,8 @@ impl Service {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn get_account_id(&self) -> &AccountId {
-        self.signer.account_id()
+    pub fn get_account_id(&self) -> AccountId {
+        subxt::config::polkadot::AccountId32::from(self.signer.public_key().0)
     }
 
     /// Get current block number (alias for get_block_number)
@@ -820,19 +805,9 @@ impl Service {
     /// # }
     /// ```
     pub fn sign_data(&self, data: &[u8]) -> Result<String, BittensorError> {
-        use subxt::tx::Signer as SignerTrait;
-
         // Sign the data with our signer
         let signature = self.signer.sign(data);
-
-        // For sr25519, we need to extract the signature bytes
-        // The MultiSignature contains the actual signature data
-        match signature {
-            subxt::utils::MultiSignature::Sr25519(sig) => Ok(hex::encode(sig)),
-            _ => Err(BittensorError::AuthError {
-                message: "Unexpected signature type - expected Sr25519".to_string(),
-            }),
-        }
+        Ok(hex::encode(signature.0))
     }
 }
 

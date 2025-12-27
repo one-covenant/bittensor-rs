@@ -1,5 +1,5 @@
 //! API module that includes the generated metadata
 //! This allows us to use our own metadata instead of crabtensor's built-in metadata
 
-// Include the generated metadata from our build script
-include!(concat!(env!("OUT_DIR"), "/metadata.rs"));
+#[subxt::subxt(runtime_metadata_path = "metadata/finney.scale")]
+pub mod api {}

@@ -134,7 +134,7 @@ pub type AccountId = subxt::config::polkadot::AccountId32;
 /// This allows dependents to use bittensor's bundled sp_core without
 /// adding it as a direct dependency.
 pub mod crypto {
-    pub use subxt::ext::sp_core::crypto::{Pair, Ss58AddressFormat, Ss58Codec};
-    pub use subxt::ext::sp_core::sr25519;
-    pub use subxt::ext::sp_core::Pair as PairTrait;
+    pub use sp_core::crypto::{Pair, Ss58AddressFormat, Ss58Codec};
+    pub use sp_core::sr25519;
+    pub use sp_core::Pair as PairTrait;
 }

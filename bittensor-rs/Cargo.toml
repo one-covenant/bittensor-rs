@@ -33,7 +33,9 @@ serde_json = { workspace = true }
 
 # Substrate/Polkadot interaction
 subxt = { workspace = true }
+subxt-signer = { workspace = true }
 sp-core = { workspace = true }
+sp-runtime = { workspace = true }
 
 # Crypto and encoding
 hex = { workspace = true }
@@ -47,10 +49,6 @@ home = { workspace = true }
 subxt-codegen = { workspace = true, optional = true }
 subxt-metadata = { workspace = true, optional = true }
 parity-scale-codec = { workspace = true, optional = true }
-
-[build-dependencies]
-tokio = { workspace = true }
-parity-scale-codec = { workspace = true }
 
 [[bin]]
 name = "generate-metadata"

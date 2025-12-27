@@ -41,7 +41,7 @@ pub async fn get_balance(
         hotkey: address.to_string(),
     })?;
 
-    let storage = api::storage().system().account(&account_id);
+    let storage = api::storage().system().account(account_id);
 
     let account_info = client
         .storage()
@@ -87,7 +87,7 @@ pub async fn get_stake(
 
     let storage = api::storage()
         .subtensor_module()
-        .alpha(&hotkey_id, &coldkey_id, netuid);
+        .alpha(hotkey_id, coldkey_id, netuid);
 
     let stake = client
         .storage()

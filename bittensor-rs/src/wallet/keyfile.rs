@@ -10,7 +10,7 @@
 use crate::error::BittensorError;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use subxt::ext::sp_core::{sr25519, Pair};
+use sp_core::{sr25519, Pair};
 use thiserror::Error;
 
 /// Errors that can occur when loading keyfiles

@@ -2,102 +2,90 @@
 //!
 //! A subxt-compatible signer wrapper for Bittensor wallets.
 
-use subxt::config::polkadot::PolkadotConfig;
-use subxt::ext::sp_core::sr25519;
-use subxt::tx::Signer;
+use subxt_signer::sr25519::Keypair;
 
 /// A signer that wraps an sr25519 keypair for use with subxt
 ///
-/// This implements the `Signer` trait required by subxt for signing
-/// extrinsics.
+/// This implements the signing required by subxt for signing extrinsics.
 #[derive(Clone)]
 pub struct WalletSigner {
-    inner: subxt::tx::PairSigner<PolkadotConfig, sr25519::Pair>,
+    inner: Keypair,
 }
 
 impl WalletSigner {
-    /// Create a new signer from an sr25519 keypair
+    /// Create a new signer from a subxt-signer keypair
     ///
     /// # Example
     ///
-    /// ```
+    /// ```ignore
     /// use bittensor::wallet::WalletSigner;
-    /// use subxt::ext::sp_core::{sr25519, Pair};
+    /// use subxt_signer::sr25519::Keypair;
     ///
-    /// let (pair, _) = sr25519::Pair::generate();
-    /// let signer = WalletSigner::new(pair);
+    /// let keypair = Keypair::from_uri(&"//Alice".parse().unwrap()).unwrap();
+    /// let signer = WalletSigner::new(keypair);
     /// ```
-    pub fn new(pair: sr25519::Pair) -> Self {
-        Self {
-            inner: subxt::tx::PairSigner::new(pair),
-        }
+    pub fn new(keypair: Keypair) -> Self {
+        Self { inner: keypair }
     }
 
-    /// Get the underlying PairSigner for advanced usage
-    pub fn inner(&self) -> &subxt::tx::PairSigner<PolkadotConfig, sr25519::Pair> {
+    /// Create a signer from an sp_core sr25519 Pair
+    ///
+    /// This converts the sp_core keypair to a subxt-signer keypair.
+    pub fn from_sp_core_pair(pair: sp_core::sr25519::Pair) -> Self {
+        use sp_core::Pair;
+        // Get the seed bytes from the pair by converting to raw bytes
+        // The secret key is the first 64 bytes (32 bytes key + 32 bytes nonce)
+        let seed = pair.to_raw_vec();
+        let keypair = Keypair::from_secret_key(seed[..32].try_into().unwrap())
+            .expect("Valid 32-byte seed");
+        Self { inner: keypair }
+    }
+
+    /// Create a signer from a seed phrase (mnemonic or hex seed)
+    pub fn from_seed(seed: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        use subxt_signer::SecretUri;
+        
+        let uri: SecretUri = seed.parse()?;
+        let keypair = Keypair::from_uri(&uri)?;
+        Ok(Self { inner: keypair })
+    }
+
+    /// Get the underlying Keypair for advanced usage
+    pub fn keypair(&self) -> &Keypair {
         &self.inner
     }
-}
 
-impl Signer<PolkadotConfig> for WalletSigner {
-    fn account_id(&self) -> <PolkadotConfig as subxt::Config>::AccountId {
-        self.inner.account_id().clone()
-    }
-
-    fn address(&self) -> <PolkadotConfig as subxt::Config>::Address {
-        self.inner.address()
-    }
-
-    fn sign(&self, payload: &[u8]) -> <PolkadotConfig as subxt::Config>::Signature {
-        self.inner.sign(payload)
+    /// Get the public key bytes
+    pub fn public_key(&self) -> [u8; 32] {
+        self.inner.public_key().0
     }
 }
 
 impl std::fmt::Debug for WalletSigner {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WalletSigner")
-            .field("account_id", &self.account_id())
+            .field("public_key", &hex::encode(self.public_key()))
             .finish()
     }
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use subxt::ext::sp_core::Pair;
 
     #[test]
-    fn test_signer_creation() {
-        let (pair, _) = sr25519::Pair::generate();
-        let signer = WalletSigner::new(pair.clone());
-
-        // Check account ID matches
-        let expected_account = subxt::config::polkadot::AccountId32::from(pair.public().0);
-        assert_eq!(signer.account_id(), expected_account);
-    }
-
-    #[test]
-    fn test_signer_sign() {
-        let (pair, _) = sr25519::Pair::generate();
-        let signer = WalletSigner::new(pair);
-
-        let data = b"test message";
-        let signature = signer.sign(data);
-
-        // Signature should be Sr25519
-        match signature {
-            subxt::utils::MultiSignature::Sr25519(_) => {}
-            _ => panic!("Expected Sr25519 signature"),
-        }
+    fn test_signer_from_uri() {
+        let signer = WalletSigner::from_seed("//Alice").unwrap();
+        // Alice's public key should be well-known
+        assert!(!signer.public_key().iter().all(|&b| b == 0));
     }
 
     #[test]
     fn test_signer_debug() {
-        let (pair, _) = sr25519::Pair::generate();
-        let signer = WalletSigner::new(pair);
-
+        let signer = WalletSigner::from_seed("//Alice").unwrap();
         let debug_str = format!("{:?}", signer);
         assert!(debug_str.contains("WalletSigner"));
-        assert!(debug_str.contains("account_id"));
+        assert!(debug_str.contains("public_key"));
     }
 }

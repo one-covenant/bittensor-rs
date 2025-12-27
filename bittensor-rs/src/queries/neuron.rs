@@ -111,7 +111,7 @@ pub async fn get_uid_for_hotkey(
         hotkey: hotkey.to_string(),
     })?;
 
-    let storage = api::storage().subtensor_module().uids(netuid, &hotkey_id);
+    let storage = api::storage().subtensor_module().uids(netuid, hotkey_id);
 
     let uid = client
         .storage()
