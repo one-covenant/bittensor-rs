@@ -18,7 +18,7 @@ impl WalletSigner {
     /// # Example
     ///
     /// ```ignore
-    /// use bittensor::wallet::WalletSigner;
+    /// use bittensor_rs::wallet::WalletSigner;
     /// use subxt_signer::sr25519::Keypair;
     ///
     /// let keypair = Keypair::from_uri(&"//Alice".parse().unwrap()).unwrap();

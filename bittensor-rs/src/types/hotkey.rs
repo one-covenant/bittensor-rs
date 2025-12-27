@@ -17,7 +17,7 @@ use crate::AccountId;
 /// # Example
 ///
 /// ```
-/// use bittensor::types::Hotkey;
+/// use bittensor_rs::types::Hotkey;
 ///
 /// let hotkey = Hotkey::new("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY".to_string());
 /// assert!(hotkey.is_ok());
@@ -40,7 +40,7 @@ impl Hotkey {
     /// # Example
     ///
     /// ```
-    /// use bittensor::types::Hotkey;
+    /// use bittensor_rs::types::Hotkey;
     ///
     /// // Valid SS58 address
     /// let valid = Hotkey::new("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY".to_string());
@@ -93,7 +93,7 @@ impl Hotkey {
     /// # Example
     ///
     /// ```
-    /// use bittensor::types::Hotkey;
+    /// use bittensor_rs::types::Hotkey;
     ///
     /// let hotkey = Hotkey::new("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY".to_string()).unwrap();
     /// assert_eq!(hotkey.as_str(), "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY");
@@ -117,7 +117,7 @@ impl Hotkey {
     /// # Example
     ///
     /// ```
-    /// use bittensor::types::Hotkey;
+    /// use bittensor_rs::types::Hotkey;
     ///
     /// let hotkey = Hotkey::new("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY".to_string()).unwrap();
     /// let account_id = hotkey.to_account_id();
@@ -133,7 +133,7 @@ impl Hotkey {
     /// # Example
     ///
     /// ```
-    /// use bittensor::types::Hotkey;
+    /// use bittensor_rs::types::Hotkey;
     /// use std::str::FromStr;
     ///
     /// let hotkey = Hotkey::new("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY".to_string()).unwrap();

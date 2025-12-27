@@ -29,7 +29,7 @@
 //! # Example
 //!
 //! ```rust,no_run
-//! use bittensor::connect::{ConnectionPoolBuilder, RetryConfig, HealthChecker};
+//! use bittensor_rs::connect::{ConnectionPoolBuilder, RetryConfig, HealthChecker};
 //! use std::sync::Arc;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {

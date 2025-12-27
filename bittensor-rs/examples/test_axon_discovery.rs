@@ -29,7 +29,7 @@ async fn test_metagraph_method(
     let runtime_api = client.runtime_api().at_latest().await?;
 
     // Import the generated API types
-    use bittensor::api::api;
+    use bittensor_rs::api::api;
 
     let metagraph = runtime_api
         .call(
@@ -133,7 +133,7 @@ async fn test_direct_extrinsic(
             }
 
             // Build storage query for Axons(netuid, hotkey)
-            let storage_query = api::storage().subtensor_module().axons(NETUID, hotkey);
+            let storage_query = api::storage().subtensor_module().axons(NETUID, hotkey.clone());
 
             // Query the storage
             match client

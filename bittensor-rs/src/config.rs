@@ -11,7 +11,7 @@ use std::time::Duration;
 /// # Example
 ///
 /// ```
-/// use bittensor::config::BittensorConfig;
+/// use bittensor_rs::config::BittensorConfig;
 ///
 /// let config = BittensorConfig::default();
 /// assert_eq!(config.network, "finney");
@@ -87,7 +87,7 @@ impl BittensorConfig {
     /// # Example
     ///
     /// ```
-    /// use bittensor::config::BittensorConfig;
+    /// use bittensor_rs::config::BittensorConfig;
     ///
     /// let config = BittensorConfig::finney("my_wallet", "my_hotkey", 1);
     /// assert_eq!(config.network, "finney");
@@ -107,7 +107,7 @@ impl BittensorConfig {
     /// # Example
     ///
     /// ```
-    /// use bittensor::config::BittensorConfig;
+    /// use bittensor_rs::config::BittensorConfig;
     ///
     /// let config = BittensorConfig::testnet("my_wallet", "my_hotkey", 1);
     /// assert_eq!(config.network, "test");
@@ -127,7 +127,7 @@ impl BittensorConfig {
     /// # Example
     ///
     /// ```
-    /// use bittensor::config::BittensorConfig;
+    /// use bittensor_rs::config::BittensorConfig;
     ///
     /// let config = BittensorConfig::local("my_wallet", "my_hotkey", 1);
     /// assert_eq!(config.network, "local");
@@ -151,7 +151,7 @@ impl BittensorConfig {
     /// # Example
     ///
     /// ```
-    /// use bittensor::config::BittensorConfig;
+    /// use bittensor_rs::config::BittensorConfig;
     ///
     /// let config = BittensorConfig::default();
     /// let endpoint = config.get_chain_endpoint();
@@ -179,7 +179,7 @@ impl BittensorConfig {
     /// # Example
     ///
     /// ```
-    /// use bittensor::config::BittensorConfig;
+    /// use bittensor_rs::config::BittensorConfig;
     ///
     /// let config = BittensorConfig::default();
     /// let endpoints = config.get_chain_endpoints();
@@ -221,7 +221,7 @@ impl BittensorConfig {
     /// # Example
     ///
     /// ```
-    /// use bittensor::config::BittensorConfig;
+    /// use bittensor_rs::config::BittensorConfig;
     ///
     /// let config = BittensorConfig::default();
     /// assert!(config.validate().is_ok());

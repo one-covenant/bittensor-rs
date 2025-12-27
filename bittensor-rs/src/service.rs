@@ -14,7 +14,7 @@
 //! # Example
 //!
 //! ```rust,no_run
-//! use bittensor::{config::BittensorConfig, Service};
+//! use bittensor_rs::{config::BittensorConfig, Service};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -39,7 +39,7 @@
 //! Monitor connection health and metrics:
 //!
 //! ```rust,no_run
-//! # use bittensor::{config::BittensorConfig, Service};
+//! # use bittensor_rs::{config::BittensorConfig, Service};
 //! # async fn example(service: Service) -> Result<(), Box<dyn std::error::Error>> {
 //! let metrics = service.connection_metrics().await;
 //! println!("Healthy: {}/{}", metrics.healthy_connections, metrics.total_connections);
@@ -616,8 +616,8 @@ impl Service {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # use bittensor::Service;
-    /// # use bittensor::config::BittensorConfig;
+    /// # use bittensor_rs::Service;
+    /// # use bittensor_rs::config::BittensorConfig;
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # let config = BittensorConfig::default();
@@ -685,8 +685,8 @@ impl Service {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # use bittensor::Service;
-    /// # use bittensor::config::BittensorConfig;
+    /// # use bittensor_rs::Service;
+    /// # use bittensor_rs::config::BittensorConfig;
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # let config = BittensorConfig::default();
@@ -727,8 +727,8 @@ impl Service {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # use bittensor::Service;
-    /// # use bittensor::config::BittensorConfig;
+    /// # use bittensor_rs::Service;
+    /// # use bittensor_rs::config::BittensorConfig;
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # let config = BittensorConfig::default();
@@ -782,8 +782,8 @@ impl Service {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # use bittensor::Service;
-    /// # use bittensor::config::BittensorConfig;
+    /// # use bittensor_rs::Service;
+    /// # use bittensor_rs::config::BittensorConfig;
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # let config = BittensorConfig::default();
@@ -806,8 +806,8 @@ impl Service {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # use bittensor::Service;
-    /// # use bittensor::config::BittensorConfig;
+    /// # use bittensor_rs::Service;
+    /// # use bittensor_rs::config::BittensorConfig;
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # let config = BittensorConfig::default();
@@ -837,8 +837,8 @@ impl Service {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # use bittensor::Service;
-    /// # use bittensor::config::BittensorConfig;
+    /// # use bittensor_rs::Service;
+    /// # use bittensor_rs::config::BittensorConfig;
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # let config = BittensorConfig::default();

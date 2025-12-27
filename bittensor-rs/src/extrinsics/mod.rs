@@ -16,31 +16,31 @@
 //!
 //! # Example
 //!
-//! ```rust,no_run
-//! use bittensor::extrinsics::{set_weights, WeightsParams, add_stake, StakeParams};
+//! ```rust,ignore
+//! use bittensor_rs::extrinsics::{set_weights, WeightsParams, add_stake, StakeParams};
 //!
-//! # async fn example(
-//! #     client: &subxt::OnlineClient<subxt::PolkadotConfig>,
-//! #     signer: &subxt_signer::sr25519::Keypair,
-//! #     hotkey: subxt::config::polkadot::AccountId32,
-//! # ) -> Result<(), Box<dyn std::error::Error>> {
-//! // Set weights on subnet 1
-//! let params = WeightsParams {
-//!     netuid: 1,
-//!     uids: vec![0, 1, 2],
-//!     weights: vec![100, 200, 300],
-//!     version_key: 0,
-//! };
-//! let response = set_weights(client, signer, params).await?;
+//! async fn example(
+//!     client: &subxt::OnlineClient<subxt::PolkadotConfig>,
+//!     signer: &subxt_signer::sr25519::Keypair,
+//!     hotkey: subxt::config::polkadot::AccountId32,
+//! ) -> Result<(), Box<dyn std::error::Error>> {
+//!     // Set weights on subnet 1
+//!     let params = WeightsParams {
+//!         netuid: 1,
+//!         uids: vec![0, 1, 2],
+//!         weights: vec![100, 200, 300],
+//!         version_key: 0,
+//!     };
+//!     let response = set_weights(client, signer, params).await?;
 //!
-//! // Add stake to a hotkey (1 TAO = 1e9 rao)
-//! let stake_params = StakeParams {
-//!     hotkey,
-//!     amount_rao: 1_000_000_000,
-//! };
-//! add_stake(client, signer, stake_params).await?;
-//! # Ok(())
-//! # }
+//!     // Add stake to a hotkey (1 TAO = 1e9 rao)
+//!     let stake_params = StakeParams {
+//!         hotkey,
+//!         amount_rao: 1_000_000_000,
+//!     };
+//!     add_stake(client, signer, stake_params).await?;
+//!     Ok(())
+//! }
 //! ```
 //!
 //! All extrinsic functions return [`ExtrinsicResponse`] with transaction status.

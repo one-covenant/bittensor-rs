@@ -31,7 +31,7 @@ impl ChildKey {
     /// # Example
     ///
     /// ```
-    /// use bittensor::extrinsics::ChildKey;
+    /// use bittensor_rs::extrinsics::ChildKey;
     /// use subxt::utils::AccountId32;
     ///
     /// let child = AccountId32::from([1u8; 32]);

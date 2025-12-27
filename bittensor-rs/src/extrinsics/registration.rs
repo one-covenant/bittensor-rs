@@ -38,7 +38,7 @@ impl ServeAxonParams {
     /// # Example
     ///
     /// ```
-    /// use bittensor::extrinsics::ServeAxonParams;
+    /// use bittensor_rs::extrinsics::ServeAxonParams;
     ///
     /// let params = ServeAxonParams::ipv4(1, "192.168.1.1", 8080);
     /// assert!(params.is_ok());

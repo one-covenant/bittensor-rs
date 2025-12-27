@@ -32,7 +32,7 @@ impl StakeParams {
     /// # Example
     ///
     /// ```
-    /// use bittensor::extrinsics::StakeParams;
+    /// use bittensor_rs::extrinsics::StakeParams;
     ///
     /// let params = StakeParams::new_tao(
     ///     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
@@ -75,20 +75,18 @@ impl StakeParams {
 ///
 /// # Example
 ///
-/// ```rust,no_run
-/// use bittensor::extrinsics::{add_stake, StakeParams};
+/// ```rust,ignore
+/// use bittensor_rs::extrinsics::{add_stake, StakeParams};
 ///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// # let client: subxt::OnlineClient<subxt::PolkadotConfig> = todo!();
-/// # let signer: bittensor::WalletSigner = todo!();
-/// let params = StakeParams::new_tao(
-///     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
-///     1,    // netuid
-///     1.0   // TAO amount
-/// );
-/// let result = add_stake(&client, &signer, params).await?;
-/// # Ok(())
-/// # }
+/// async fn example(client: &subxt::OnlineClient<subxt::PolkadotConfig>, signer: &impl subxt::tx::Signer<subxt::PolkadotConfig>) -> Result<(), Box<dyn std::error::Error>> {
+///     let params = StakeParams::new_tao(
+///         "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+///         1,    // netuid
+///         1.0   // TAO amount
+///     );
+///     let result = add_stake(client, signer, params).await?;
+///     Ok(())
+/// }
 /// ```
 pub async fn add_stake<S>(
     client: &OnlineClient<PolkadotConfig>,

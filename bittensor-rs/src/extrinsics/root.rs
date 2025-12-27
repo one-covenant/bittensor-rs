@@ -35,7 +35,7 @@ impl RootWeightsParams {
     /// # Example
     ///
     /// ```
-    /// use bittensor::extrinsics::RootWeightsParams;
+    /// use bittensor_rs::extrinsics::RootWeightsParams;
     /// use subxt::utils::AccountId32;
     ///
     /// let hotkey = AccountId32::from([1u8; 32]);

@@ -35,7 +35,7 @@ pub struct NormalizedWeight {
 /// # Example
 ///
 /// ```
-/// use bittensor::utils::{normalize_weights, NormalizedWeight};
+/// use bittensor_rs::utils::{normalize_weights, NormalizedWeight};
 ///
 /// let weights = vec![(0, 100), (1, 100)];
 /// let normalized = normalize_weights(&weights);
@@ -112,8 +112,8 @@ pub fn set_weights_payload(
 /// # Example
 ///
 /// ```rust,no_run
-/// use bittensor::types::Hotkey;
-/// use bittensor::utils::verify_bittensor_signature;
+/// use bittensor_rs::types::Hotkey;
+/// use bittensor_rs::utils::verify_bittensor_signature;
 ///
 /// let hotkey = Hotkey::new("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY".to_string()).unwrap();
 /// let result = verify_bittensor_signature(&hotkey, "abcd...", b"message");

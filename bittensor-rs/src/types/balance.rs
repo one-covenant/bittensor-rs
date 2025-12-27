@@ -20,7 +20,7 @@ pub const RAO_PER_TAO: u64 = 1_000_000_000;
 /// # Example
 ///
 /// ```
-/// use bittensor::types::Balance;
+/// use bittensor_rs::types::Balance;
 ///
 /// // Create from TAO
 /// let balance = Balance::from_tao(1.5);
@@ -42,7 +42,7 @@ impl Balance {
     /// # Example
     ///
     /// ```
-    /// use bittensor::types::Balance;
+    /// use bittensor_rs::types::Balance;
     ///
     /// let zero = Balance::zero();
     /// assert_eq!(zero.as_rao(), 0);
@@ -57,7 +57,7 @@ impl Balance {
     /// # Example
     ///
     /// ```
-    /// use bittensor::types::Balance;
+    /// use bittensor_rs::types::Balance;
     ///
     /// let balance = Balance::from_rao(1_000_000_000);
     /// assert_eq!(balance.as_tao(), 1.0);
@@ -71,7 +71,7 @@ impl Balance {
     /// # Example
     ///
     /// ```
-    /// use bittensor::types::Balance;
+    /// use bittensor_rs::types::Balance;
     ///
     /// let balance = Balance::from_tao(2.5);
     /// assert_eq!(balance.as_rao(), 2_500_000_000);
@@ -86,7 +86,7 @@ impl Balance {
     /// # Example
     ///
     /// ```
-    /// use bittensor::types::Balance;
+    /// use bittensor_rs::types::Balance;
     ///
     /// let balance = Balance::from_tao(1.0);
     /// assert_eq!(balance.as_rao(), 1_000_000_000);
@@ -100,7 +100,7 @@ impl Balance {
     /// # Example
     ///
     /// ```
-    /// use bittensor::types::Balance;
+    /// use bittensor_rs::types::Balance;
     ///
     /// let balance = Balance::from_rao(1_500_000_000);
     /// assert_eq!(balance.as_tao(), 1.5);
@@ -114,7 +114,7 @@ impl Balance {
     /// # Example
     ///
     /// ```
-    /// use bittensor::types::Balance;
+    /// use bittensor_rs::types::Balance;
     ///
     /// assert!(Balance::zero().is_zero());
     /// assert!(!Balance::from_tao(1.0).is_zero());
@@ -128,7 +128,7 @@ impl Balance {
     /// # Example
     ///
     /// ```
-    /// use bittensor::types::Balance;
+    /// use bittensor_rs::types::Balance;
     ///
     /// let a = Balance::from_tao(1.0);
     /// let b = Balance::from_tao(2.0);
@@ -146,7 +146,7 @@ impl Balance {
     /// # Example
     ///
     /// ```
-    /// use bittensor::types::Balance;
+    /// use bittensor_rs::types::Balance;
     ///
     /// let a = Balance::from_tao(1.0);
     /// let b = Balance::from_tao(2.0);
@@ -164,7 +164,7 @@ impl Balance {
     /// # Example
     ///
     /// ```
-    /// use bittensor::types::Balance;
+    /// use bittensor_rs::types::Balance;
     ///
     /// let a = Balance::from_tao(1.0);
     /// let b = Balance::from_tao(2.0);
@@ -180,7 +180,7 @@ impl Balance {
     /// # Example
     ///
     /// ```
-    /// use bittensor::types::Balance;
+    /// use bittensor_rs::types::Balance;
     ///
     /// let a = Balance::from_tao(1.0);
     /// let b = Balance::from_tao(2.0);
@@ -279,7 +279,7 @@ impl From<Balance> for u64 {
 /// # Example
 ///
 /// ```
-/// use bittensor::types::tao_to_rao;
+/// use bittensor_rs::types::tao_to_rao;
 ///
 /// assert_eq!(tao_to_rao(1.0), 1_000_000_000);
 /// assert_eq!(tao_to_rao(0.5), 500_000_000);
@@ -293,7 +293,7 @@ pub fn tao_to_rao(tao: f64) -> u64 {
 /// # Example
 ///
 /// ```
-/// use bittensor::types::rao_to_tao;
+/// use bittensor_rs::types::rao_to_tao;
 ///
 /// assert_eq!(rao_to_tao(1_000_000_000), 1.0);
 /// assert_eq!(rao_to_tao(500_000_000), 0.5);

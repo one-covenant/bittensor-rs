@@ -31,7 +31,7 @@ impl TransferParams {
     /// # Example
     ///
     /// ```
-    /// use bittensor::extrinsics::TransferParams;
+    /// use bittensor_rs::extrinsics::TransferParams;
     ///
     /// let params = TransferParams::new_tao(
     ///     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
@@ -77,19 +77,17 @@ impl TransferParams {
 ///
 /// # Example
 ///
-/// ```rust,no_run
-/// use bittensor::extrinsics::{transfer, TransferParams};
+/// ```rust,ignore
+/// use bittensor_rs::extrinsics::{transfer, TransferParams};
 ///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// # let client: subxt::OnlineClient<subxt::PolkadotConfig> = todo!();
-/// # let signer: bittensor::WalletSigner = todo!();
-/// let params = TransferParams::new_tao(
-///     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
-///     1.0
-/// );
-/// let result = transfer(&client, &signer, params).await?;
-/// # Ok(())
-/// # }
+/// async fn example(client: &subxt::OnlineClient<subxt::PolkadotConfig>, signer: &impl subxt::tx::Signer<subxt::PolkadotConfig>) -> Result<(), Box<dyn std::error::Error>> {
+///     let params = TransferParams::new_tao(
+///         "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+///         1.0
+///     );
+///     let result = transfer(client, signer, params).await?;
+///     Ok(())
+/// }
 /// ```
 pub async fn transfer<S>(
     client: &OnlineClient<PolkadotConfig>,
