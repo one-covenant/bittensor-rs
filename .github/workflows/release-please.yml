@@ -26,10 +26,14 @@ jobs:
             tag_name: ${{ steps.release.outputs.tag_name }}
             bittensor-rs--release_created: ${{ steps.release.outputs['bittensor-rs--release_created'] }}
         steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
             - uses: googleapis/release-please-action@v4
               id: release
               with:
-                  # Use RELEASE_TOKEN if available (PAT with repo scope), otherwise GITHUB_TOKEN
                   token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
                   config-file: release-please-config.json
                   manifest-file: .release-please-manifest.json
