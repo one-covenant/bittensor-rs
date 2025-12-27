@@ -404,7 +404,7 @@ impl Service {
     ///
     /// # Returns
     ///
-    /// * `Result<Option<NeuronInfo<AccountId>>, BittensorError>` - A Result containing either the neuron info or an error
+    /// * `Result<Option<NeuronInfo>, BittensorError>` - A Result containing either the neuron info or an error
     ///
     /// # Errors
     ///
@@ -413,10 +413,7 @@ impl Service {
         &self,
         netuid: u16,
         uid: u16,
-    ) -> Result<
-        Option<api::runtime_types::pallet_subtensor::rpc_info::neuron_info::NeuronInfo<AccountId>>,
-        BittensorError,
-    > {
+    ) -> Result<Option<crate::NeuronInfo>, BittensorError> {
         debug!("Getting neuron info for UID: {} on netuid: {}", uid, netuid);
 
         // Get a healthy client from the pool
@@ -458,14 +455,14 @@ impl Service {
     ///
     /// # Returns
     ///
-    /// * `Result<Metagraph<AccountId>, BittensorError>` - A Result containing either the metagraph or an error
+    /// * `Result<Metagraph, BittensorError>` - A Result containing either the metagraph or an error
     ///
     /// # Errors
     ///
     /// * `RpcError` - If the RPC call fails
     /// * `SubnetNotFound` - If the subnet doesn't exist
     /// * `ServiceUnavailable` - If circuit breaker is open
-    pub async fn get_metagraph(&self, netuid: u16) -> Result<Metagraph<AccountId>, BittensorError> {
+    pub async fn get_metagraph(&self, netuid: u16) -> Result<Metagraph, BittensorError> {
         info!(
             "Fetching metagraph for netuid: {} with circuit breaker protection",
             netuid
@@ -560,7 +557,7 @@ impl Service {
     ///
     /// # Returns
     ///
-    /// * `Result<SelectiveMetagraph<AccountId>, BittensorError>` - A Result containing either the selective metagraph or an error
+    /// * `Result<SelectiveMetagraph, BittensorError>` - A Result containing either the selective metagraph or an error
     ///
     /// # Errors
     ///
@@ -586,7 +583,7 @@ impl Service {
         &self,
         netuid: u16,
         fields: Vec<u16>,
-    ) -> Result<SelectiveMetagraph<AccountId>, BittensorError> {
+    ) -> Result<SelectiveMetagraph, BittensorError> {
         info!(
             "Fetching selective metagraph for netuid: {} with {} fields",
             netuid,

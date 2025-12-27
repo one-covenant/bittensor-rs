@@ -1,5 +1,9 @@
 //! API module that includes the generated metadata
-//! This allows us to use our own metadata instead of crabtensor's built-in metadata
+//!
+//! The metadata is automatically fetched from the chain at build time
+//! by the build.rs script using subxt-cli and subxt-codegen.
+//!
+//! Set BITTENSOR_OFFLINE=1 to skip metadata fetch and use cached version.
+//! Set BITTENSOR_ENDPOINT to use a different chain endpoint.
 
-#[subxt::subxt(runtime_metadata_path = "metadata/finney.scale")]
-pub mod api {}
+include!(concat!(env!("OUT_DIR"), "/metadata.rs"));

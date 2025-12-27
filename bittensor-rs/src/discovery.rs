@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use tracing::{debug, info, warn};
 
-use crate::{AccountId, Metagraph};
+use crate::Metagraph;
 
 /// Information about a discovered neuron
 #[derive(Debug, Clone)]
@@ -42,12 +42,12 @@ pub struct AxonInfo {
 
 /// Discovers neurons from the metagraph
 pub struct NeuronDiscovery<'a> {
-    metagraph: &'a Metagraph<AccountId>,
+    metagraph: &'a Metagraph,
 }
 
 impl<'a> NeuronDiscovery<'a> {
     /// Create a new neuron discovery instance
-    pub fn new(metagraph: &'a Metagraph<AccountId>) -> Self {
+    pub fn new(metagraph: &'a Metagraph) -> Self {
         Self { metagraph }
     }
 
@@ -284,7 +284,7 @@ impl<'a> NeuronDiscovery<'a> {
 }
 
 /// Create a mapping of hotkeys to UIDs for quick lookup
-pub fn create_hotkey_to_uid_map(metagraph: &Metagraph<AccountId>) -> HashMap<String, u16> {
+pub fn create_hotkey_to_uid_map(metagraph: &Metagraph) -> HashMap<String, u16> {
     let mut map = HashMap::new();
     for (idx, hotkey) in metagraph.hotkeys.iter().enumerate() {
         map.insert(hotkey.to_string(), idx as u16);
@@ -293,7 +293,7 @@ pub fn create_hotkey_to_uid_map(metagraph: &Metagraph<AccountId>) -> HashMap<Str
 }
 
 /// Create a mapping of UIDs to axon endpoints
-pub fn create_uid_to_axon_map(metagraph: &Metagraph<AccountId>) -> HashMap<u16, SocketAddr> {
+pub fn create_uid_to_axon_map(metagraph: &Metagraph) -> HashMap<u16, SocketAddr> {
     let discovery = NeuronDiscovery::new(metagraph);
     let mut map = HashMap::new();
 
