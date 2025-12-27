@@ -11,7 +11,7 @@
 //! # Quick Start
 //!
 //! ```rust,no_run
-//! use bittensor::{config::BittensorConfig, Service};
+//! use bittensor_rs::{config::BittensorConfig, Service};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {

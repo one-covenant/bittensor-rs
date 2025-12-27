@@ -31,9 +31,9 @@ impl WeightsParams {
     /// # Example
     ///
     /// ```
-    /// use bittensor::extrinsics::WeightsParams;
+    /// use bittensor_rs::extrinsics::WeightsParams;
     ///
-    /// let params = WeightsParams::new(1, vec![0, 1, 2], vec![100, 200, 300]);
+    /// let params = WeightsParams::new(1, vec![0, 1, 2], vec![100, 200, 300]).unwrap();
     /// assert_eq!(params.netuid, 1);
     /// assert_eq!(params.uids.len(), 3);
     /// ```
@@ -157,16 +157,14 @@ fn compute_commit_hash(uids: &[u16], weights: &[u16], salt: &[u16], version_key:
 ///
 /// # Example
 ///
-/// ```rust,no_run
-/// use bittensor::extrinsics::{set_weights, WeightsParams};
+/// ```rust,ignore
+/// use bittensor_rs::extrinsics::{set_weights, WeightsParams};
 ///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// # let client: subxt::OnlineClient<subxt::PolkadotConfig> = todo!();
-/// # let signer: bittensor::WalletSigner = todo!();
-/// let params = WeightsParams::new(1, vec![0, 1, 2], vec![100, 200, 300]);
-/// let result = set_weights(&client, &signer, params).await?;
-/// # Ok(())
-/// # }
+/// async fn example(client: &subxt::OnlineClient<subxt::PolkadotConfig>, signer: &impl subxt::tx::Signer<subxt::PolkadotConfig>) -> Result<(), Box<dyn std::error::Error>> {
+///     let params = WeightsParams::new(1, vec![0, 1, 2], vec![100, 200, 300]).unwrap();
+///     let result = set_weights(client, signer, params).await?;
+///     Ok(())
+/// }
 /// ```
 pub async fn set_weights<S>(
     client: &OnlineClient<PolkadotConfig>,
@@ -275,7 +273,7 @@ mod tests {
 
     #[test]
     fn test_weights_params() {
-        let params = WeightsParams::new(1, vec![0, 1, 2], vec![100, 200, 300]);
+        let params = WeightsParams::new(1, vec![0, 1, 2], vec![100, 200, 300]).unwrap();
         assert_eq!(params.netuid, 1);
         assert_eq!(params.uids.len(), 3);
         assert_eq!(params.weights.len(), 3);
@@ -284,13 +282,15 @@ mod tests {
 
     #[test]
     fn test_weights_params_builder() {
-        let params = WeightsParams::new(1, vec![0], vec![100]).with_version_key(42);
+        let params = WeightsParams::new(1, vec![0], vec![100])
+            .unwrap()
+            .with_version_key(42);
         assert_eq!(params.version_key, 42);
     }
 
     #[test]
     fn test_normalize_weights() {
-        let params = WeightsParams::new(1, vec![0, 1], vec![100, 100]);
+        let params = WeightsParams::new(1, vec![0, 1], vec![100, 100]).unwrap();
         let normalized = params.to_normalized();
 
         assert_eq!(normalized.len(), 2);

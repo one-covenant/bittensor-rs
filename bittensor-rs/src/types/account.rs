@@ -12,7 +12,7 @@ use std::str::FromStr;
 /// # Example
 ///
 /// ```
-/// use bittensor::types::{Hotkey, hotkey_to_account_id};
+/// use bittensor_rs::types::{Hotkey, hotkey_to_account_id};
 ///
 /// let hotkey = Hotkey::new("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY".to_string()).unwrap();
 /// let account_id = hotkey_to_account_id(&hotkey);
@@ -29,7 +29,7 @@ pub fn hotkey_to_account_id(hotkey: &Hotkey) -> Result<AccountId, BittensorError
 /// # Example
 ///
 /// ```
-/// use bittensor::types::{Hotkey, hotkey_to_account_id, account_id_to_hotkey};
+/// use bittensor_rs::types::{Hotkey, hotkey_to_account_id, account_id_to_hotkey};
 ///
 /// let hotkey = Hotkey::new("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY".to_string()).unwrap();
 /// let account_id = hotkey_to_account_id(&hotkey).unwrap();

@@ -6,7 +6,7 @@
 //! # Example
 //!
 //! ```rust,no_run
-//! use bittensor::wallet::Wallet;
+//! use bittensor_rs::wallet::Wallet;
 //!
 //! // Load an existing wallet
 //! let wallet = Wallet::load("my_wallet", "my_hotkey")?;
@@ -28,8 +28,8 @@ pub use signer::WalletSigner;
 use crate::error::BittensorError;
 use crate::types::Hotkey;
 use crate::AccountId;
-use std::path::{Path, PathBuf};
 use sp_core::{sr25519, Pair};
+use std::path::{Path, PathBuf};
 
 /// Bittensor wallet for managing keys and signing transactions
 ///
@@ -40,12 +40,12 @@ use sp_core::{sr25519, Pair};
 /// # Example
 ///
 /// ```rust,no_run
-/// use bittensor::wallet::Wallet;
+/// use bittensor_rs::wallet::Wallet;
 ///
 /// // Load from default ~/.bittensor/wallets path
 /// let wallet = Wallet::load("my_wallet", "my_hotkey")?;
 /// println!("Hotkey: {}", wallet.hotkey());
-/// # Ok::<(), bittensor::BittensorError>(())
+/// # Ok::<(), bittensor_rs::BittensorError>(())
 /// ```
 #[derive(Clone)]
 pub struct Wallet {
@@ -91,10 +91,10 @@ impl Wallet {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use bittensor::wallet::Wallet;
+    /// use bittensor_rs::wallet::Wallet;
     ///
     /// let wallet = Wallet::load("default", "default")?;
-    /// # Ok::<(), bittensor::BittensorError>(())
+    /// # Ok::<(), bittensor_rs::BittensorError>(())
     /// ```
     pub fn load(wallet_name: &str, hotkey_name: &str) -> Result<Self, BittensorError> {
         let wallet_path = Self::default_wallet_path()?;
@@ -112,12 +112,12 @@ impl Wallet {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use bittensor::wallet::Wallet;
+    /// use bittensor_rs::wallet::Wallet;
     /// use std::path::PathBuf;
     ///
     /// let base_path = PathBuf::from("/custom/wallets");
     /// let wallet = Wallet::load_from_path("my_wallet", "my_hotkey", &base_path)?;
-    /// # Ok::<(), bittensor::BittensorError>(())
+    /// # Ok::<(), bittensor_rs::BittensorError>(())
     /// ```
     pub fn load_from_path(
         wallet_name: &str,
@@ -161,9 +161,9 @@ impl Wallet {
     /// # Example
     ///
     /// ```
-    /// use bittensor::wallet::Wallet;
+    /// use bittensor_rs::wallet::Wallet;
     ///
-    /// let wallet = Wallet::create_random("test_wallet", "test_hotkey");
+    /// let wallet = Wallet::create_random("test_wallet", "test_hotkey").unwrap();
     /// assert!(!wallet.hotkey().as_str().is_empty());
     /// ```
     pub fn create_random(wallet_name: &str, hotkey_name: &str) -> Result<Self, BittensorError> {
@@ -190,11 +190,11 @@ impl Wallet {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use bittensor::wallet::Wallet;
+    /// use bittensor_rs::wallet::Wallet;
     ///
     /// let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     /// let wallet = Wallet::from_mnemonic("test", "test", mnemonic)?;
-    /// # Ok::<(), bittensor::BittensorError>(())
+    /// # Ok::<(), bittensor_rs::BittensorError>(())
     /// ```
     pub fn from_mnemonic(
         wallet_name: &str,
@@ -230,7 +230,7 @@ impl Wallet {
     /// # Example
     ///
     /// ```
-    /// use bittensor::wallet::Wallet;
+    /// use bittensor_rs::wallet::Wallet;
     ///
     /// let seed = "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
     /// let wallet = Wallet::from_seed_hex("test", "test", seed).unwrap();
@@ -272,9 +272,9 @@ impl Wallet {
     /// # Example
     ///
     /// ```
-    /// use bittensor::wallet::Wallet;
+    /// use bittensor_rs::wallet::Wallet;
     ///
-    /// let wallet = Wallet::create_random("test", "test");
+    /// let wallet = Wallet::create_random("test", "test").unwrap();
     /// let hotkey = wallet.hotkey();
     /// println!("Address: {}", hotkey);
     /// ```
@@ -302,9 +302,9 @@ impl Wallet {
     /// # Example
     ///
     /// ```
-    /// use bittensor::wallet::Wallet;
+    /// use bittensor_rs::wallet::Wallet;
     ///
-    /// let wallet = Wallet::create_random("test", "test");
+    /// let wallet = Wallet::create_random("test", "test").unwrap();
     /// let signature = wallet.sign(b"hello world");
     /// assert_eq!(signature.len(), 64);
     /// ```
@@ -318,9 +318,9 @@ impl Wallet {
     /// # Example
     ///
     /// ```
-    /// use bittensor::wallet::Wallet;
+    /// use bittensor_rs::wallet::Wallet;
     ///
-    /// let wallet = Wallet::create_random("test", "test");
+    /// let wallet = Wallet::create_random("test", "test").unwrap();
     /// let sig_hex = wallet.sign_hex(b"hello");
     /// assert_eq!(sig_hex.len(), 128); // 64 bytes = 128 hex chars
     /// ```
@@ -333,9 +333,9 @@ impl Wallet {
     /// # Example
     ///
     /// ```
-    /// use bittensor::wallet::Wallet;
+    /// use bittensor_rs::wallet::Wallet;
     ///
-    /// let wallet = Wallet::create_random("test", "test");
+    /// let wallet = Wallet::create_random("test", "test").unwrap();
     /// let signer = wallet.signer();
     /// ```
     pub fn signer(&self) -> WalletSigner {
@@ -361,9 +361,9 @@ impl Wallet {
     /// # Example
     ///
     /// ```
-    /// use bittensor::wallet::Wallet;
+    /// use bittensor_rs::wallet::Wallet;
     ///
-    /// let wallet = Wallet::create_random("test", "test");
+    /// let wallet = Wallet::create_random("test", "test").unwrap();
     /// let message = b"hello world";
     /// let signature = wallet.sign(message);
     /// assert!(wallet.verify(message, &signature));
@@ -439,7 +439,7 @@ mod tests {
 
     #[test]
     fn test_create_random_wallet() {
-        let wallet = Wallet::create_random("test_wallet", "test_hotkey");
+        let wallet = Wallet::create_random("test_wallet", "test_hotkey").unwrap();
         assert_eq!(wallet.name, "test_wallet");
         assert_eq!(wallet.hotkey_name, "test_hotkey");
         // Check that we have a valid hotkey
@@ -449,7 +449,7 @@ mod tests {
 
     #[test]
     fn test_sign_and_verify() {
-        let wallet = Wallet::create_random("test", "test");
+        let wallet = Wallet::create_random("test", "test").unwrap();
         let message = b"test message";
         let signature = wallet.sign(message);
 
@@ -459,7 +459,7 @@ mod tests {
 
     #[test]
     fn test_sign_hex() {
-        let wallet = Wallet::create_random("test", "test");
+        let wallet = Wallet::create_random("test", "test").unwrap();
         let sig_hex = wallet.sign_hex(b"test");
         assert_eq!(sig_hex.len(), 128);
         assert!(hex::decode(&sig_hex).is_ok());
@@ -488,21 +488,21 @@ mod tests {
 
     #[test]
     fn test_verify_wrong_signature() {
-        let wallet = Wallet::create_random("test", "test");
+        let wallet = Wallet::create_random("test", "test").unwrap();
         let wrong_sig = vec![0u8; 64];
         assert!(!wallet.verify(b"test", &wrong_sig));
     }
 
     #[test]
     fn test_verify_wrong_length() {
-        let wallet = Wallet::create_random("test", "test");
+        let wallet = Wallet::create_random("test", "test").unwrap();
         let short_sig = vec![0u8; 32];
         assert!(!wallet.verify(b"test", &short_sig));
     }
 
     #[test]
     fn test_account_id() {
-        let wallet = Wallet::create_random("test", "test");
+        let wallet = Wallet::create_random("test", "test").unwrap();
         let account_id = wallet.account_id();
         let hotkey = wallet.hotkey();
 
@@ -512,7 +512,7 @@ mod tests {
 
     #[test]
     fn test_coldkey_not_unlocked() {
-        let wallet = Wallet::create_random("test", "test");
+        let wallet = Wallet::create_random("test", "test").unwrap();
         assert!(!wallet.is_coldkey_unlocked());
         assert!(wallet.coldkey().is_none());
     }

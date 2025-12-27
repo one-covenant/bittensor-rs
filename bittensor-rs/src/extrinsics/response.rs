@@ -42,7 +42,7 @@ impl std::fmt::Display for ExtrinsicStatus {
 /// # Example
 ///
 /// ```
-/// use bittensor::extrinsics::{ExtrinsicResponse, ExtrinsicStatus};
+/// use bittensor_rs::extrinsics::{ExtrinsicResponse, ExtrinsicStatus};
 ///
 /// // Create a successful response
 /// let response = ExtrinsicResponse::<u64>::success()
@@ -81,7 +81,7 @@ impl<T> ExtrinsicResponse<T> {
     /// # Example
     ///
     /// ```
-    /// use bittensor::extrinsics::ExtrinsicResponse;
+    /// use bittensor_rs::extrinsics::ExtrinsicResponse;
     ///
     /// let response: ExtrinsicResponse<()> = ExtrinsicResponse::success();
     /// assert!(response.is_success());
@@ -104,7 +104,7 @@ impl<T> ExtrinsicResponse<T> {
     /// # Example
     ///
     /// ```
-    /// use bittensor::extrinsics::ExtrinsicResponse;
+    /// use bittensor_rs::extrinsics::ExtrinsicResponse;
     ///
     /// let response: ExtrinsicResponse<()> = ExtrinsicResponse::failed("Something went wrong");
     /// assert!(!response.is_success());

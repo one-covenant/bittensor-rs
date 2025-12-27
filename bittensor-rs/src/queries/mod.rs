@@ -1,10 +1,33 @@
-//! # Query Modules
+//! # Chain Queries
 //!
-//! Chain state queries for the Bittensor network:
-//! - Account balance queries
-//! - Metagraph queries
-//! - Subnet information queries
-//! - Neuron information queries
+//! Read-only queries against Bittensor blockchain state.
+//!
+//! This module provides functions for querying:
+//!
+//! - **Account**: Balances, stake amounts, and stake info
+//! - **Metagraph**: Full or selective metagraph data for subnets
+//! - **Neurons**: Individual neuron info and UID lookups
+//! - **Subnets**: Subnet existence, hyperparameters, and metadata
+//!
+//! # Example
+//!
+//! ```rust,ignore
+//! use bittensor_rs::queries::{get_metagraph, get_balance, get_neuron};
+//!
+//! async fn example(client: &subxt::OnlineClient<subxt::PolkadotConfig>, account_id: &subxt::config::polkadot::AccountId32) -> Result<(), Box<dyn std::error::Error>> {
+//!     // Get metagraph for subnet 1
+//!     let metagraph = get_metagraph(client, 1).await?;
+//!
+//!     // Check account balance
+//!     let balance = get_balance(client, account_id).await?;
+//!
+//!     // Get specific neuron by UID
+//!     let neuron = get_neuron(client, 1, 0).await?;
+//!     Ok(())
+//! }
+//! ```
+//!
+//! All query functions accept a subxt `OnlineClient` and return typed results.
 
 mod account;
 mod metagraph;

@@ -39,7 +39,7 @@ impl SubnetIdentity {
     /// # Example
     ///
     /// ```
-    /// use bittensor::extrinsics::SubnetIdentity;
+    /// use bittensor_rs::extrinsics::SubnetIdentity;
     ///
     /// let identity = SubnetIdentity::new("My Subnet");
     /// assert_eq!(identity.name, "My Subnet");

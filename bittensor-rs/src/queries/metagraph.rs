@@ -36,7 +36,7 @@ pub type SelectiveMetagraph =
 /// # Example
 ///
 /// ```rust,no_run
-/// use bittensor::queries::get_metagraph;
+/// use bittensor_rs::queries::get_metagraph;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client: subxt::OnlineClient<subxt::PolkadotConfig> = todo!();

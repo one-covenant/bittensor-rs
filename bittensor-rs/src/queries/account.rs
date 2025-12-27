@@ -24,7 +24,7 @@ use subxt::PolkadotConfig;
 /// # Example
 ///
 /// ```rust,no_run
-/// use bittensor::queries::get_balance;
+/// use bittensor_rs::queries::get_balance;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client: subxt::OnlineClient<subxt::PolkadotConfig> = todo!();
