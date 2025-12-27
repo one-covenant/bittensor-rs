@@ -7,7 +7,7 @@ pub enum AppError {
     #[error("Invalid input: {0}")]
     InvalidInput(String),
     #[error("Bittensor error: {0}")]
-    BittensorError(#[from] bittensor_rs::errors::SubtensorError),
+    BittensorError(#[from] bittensor_rs::BittensorError),
     #[error("Wallet error: {0}")]
     WalletError(#[from] bittensor_wallet::WalletError),
     #[error("Configuration error: {0}")]

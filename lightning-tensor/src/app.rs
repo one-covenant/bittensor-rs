@@ -1,8 +1,6 @@
 use crate::errors::AppError;
-use bittensor_rs::subnets::types::SubnetInfo;
-use bittensor_rs::Subtensor;
+use bittensor_rs::{BittensorConfig, Service, SubnetInfo};
 use bittensor_wallet::Wallet;
-use futures::executor::block_on;
 use std::error::Error;
 
 use crate::ui::AnimationState;
@@ -11,7 +9,6 @@ use log::debug;
 use ratatui::backend::Backend;
 use ratatui::widgets::ListState;
 use ratatui::{Frame, Terminal};
-use sp_core::crypto::AccountId32;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
@@ -49,8 +46,8 @@ pub enum AppState {
 pub struct App {
     pub state: AppState,
     pub should_quit: bool,
-    pub subtensor: Subtensor,
-    pub subnets: Vec<SubnetInfo<AccountId32>>,
+    pub subtensor: Option<Service>,
+    pub subnets: Vec<SubnetInfo>,
     pub selected_subnet: Option<usize>,
     pub messages: Arc<Mutex<Vec<String>>>,
     pub input_mode: bool,
@@ -68,8 +65,6 @@ pub struct App {
     pub wallet_dir: PathBuf,
 }
 
-const DEFAULT_NETWORK_URL: &str = "ws://localhost:9946";
-
 impl Default for App {
     fn default() -> Self {
         // Create a channel for wallet operations
@@ -80,17 +75,10 @@ impl Default for App {
             .join(".bittensor-rs")
             .join("wallets");
 
-        let config_file = Self::get_config_path().unwrap();
-        let coldkey = Self::read_coldkey_from_config(&config_file).unwrap();
-
         Self {
             state: AppState::Home,
             should_quit: false,
-            subtensor: block_on(Subtensor::new(DEFAULT_NETWORK_URL, &coldkey)).unwrap_or_else(
-                |e| {
-                    panic!("Failed to initialize Subtensor: {}", e);
-                },
-            ),
+            subtensor: None, // Initialized lazily via connect()
             subnets: Vec::new(),
             selected_subnet: None,
             messages: Arc::new(Mutex::new(Vec::new())),
@@ -120,18 +108,12 @@ impl App {
             .join(".bittensor-rs")
             .join("wallets");
 
-        let config_file = Self::get_config_path()?;
-        let coldkey = Self::read_coldkey_from_config(&config_file)?;
-        // let coldkey = Self::read_coldkey_from_config(&config_file)?;
+        let (wallet_op_sender, wallet_op_receiver) = channel(100);
 
         let mut app = App {
             state: AppState::Home,
             should_quit: false,
-            subtensor: block_on(Subtensor::new(DEFAULT_NETWORK_URL, &coldkey)).unwrap_or_else(
-                |e| {
-                    panic!("Failed to initialize Subtensor: {}", e);
-                },
-            ),
+            subtensor: None,
             subnets: Vec::new(),
             selected_subnet: None,
             messages: Arc::new(Mutex::new(Vec::new())),
@@ -144,8 +126,8 @@ impl App {
             wallet_password: String::new(),
             selected_wallet: None,
             animation_state: AnimationState::new(),
-            wallet_op_sender: channel(100).0,
-            wallet_op_receiver: channel(100).1,
+            wallet_op_sender,
+            wallet_op_receiver,
             input_buffer: String::new(),
             is_password_input: false,
             wallet_dir,
@@ -156,10 +138,24 @@ impl App {
         Ok(app)
     }
 
+    /// Connect to the Bittensor network
+    pub async fn connect(&mut self, wallet_name: &str, hotkey_name: &str, netuid: u16) -> Result<(), AppError> {
+        let config = BittensorConfig::local(wallet_name, hotkey_name, netuid);
+        let service = Service::new(config).await?;
+        self.subtensor = Some(service);
+        Ok(())
+    }
+
+    /// Get a reference to the service, if connected
+    pub fn service(&self) -> Option<&Service> {
+        self.subtensor.as_ref()
+    }
+
     /// Updates the lock cost for a specific subnet in the local list
-    pub fn update_subnet_lock_cost(&mut self, netuid: u16, lock_cost: u64) {
-        if let Some(subnet) = self.subnets.iter_mut().find(|s| s.netuid == netuid.into()) {
-            subnet.burn = lock_cost.into();
+    pub fn update_subnet_lock_cost(&mut self, netuid: u16, _lock_cost: u64) {
+        // TODO: SubnetInfo structure may need updating when lock_cost field is available
+        if let Some(_subnet) = self.subnets.iter_mut().find(|s| s.netuid == netuid) {
+            // subnet.burn = lock_cost; // Uncomment when field is available
         }
     }
 

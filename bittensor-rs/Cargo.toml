@@ -1,5 +1,5 @@
 [package]
-name = "bittensor"
+name = "bittensor-rs"
 version = "0.1.0"
 edition = "2021"
 description = "Standalone Rust SDK for Bittensor blockchain interactions"
@@ -12,7 +12,7 @@ categories = ["cryptography::cryptocurrencies", "api-bindings"]
 [features]
 default = ["wallet"]
 wallet = []
-generate-metadata = ["subxt-codegen", "subxt-metadata", "subxt-utils-fetchmetadata", "parity-scale-codec"]
+generate-metadata = ["subxt-codegen", "subxt-metadata", "parity-scale-codec"]
 
 [dependencies]
 # Async runtime
@@ -46,7 +46,6 @@ home = { workspace = true }
 # Metadata generation dependencies (only used by binary)
 subxt-codegen = { workspace = true, optional = true }
 subxt-metadata = { workspace = true, optional = true }
-subxt-utils-fetchmetadata = { workspace = true, features = ["url"] , optional = true}
 parity-scale-codec = { workspace = true, optional = true }
 
 [build-dependencies]
