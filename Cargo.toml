@@ -31,7 +31,7 @@ env_logger = "0.11.3"
 simplelog = "0.12.2"
 parking_lot = "0.12.3"
 futures = "0.3.30"
-subxt = { version = "0.37.0", features = ["substrate-compat"] }
+subxt = { version = "0.38.0", features = ["substrate-compat"] }
 pyo3 = { version = "0.20.0", features = ["extension-module"] }
 pyo3-asyncio = { version = "0.20.0", features = ["tokio-runtime"] }
 
@@ -41,6 +41,6 @@ anyhow = "1.0.86"
 tracing = "0.1.40"
 chrono = { version = "0.4.38", features = ["serde"] }
 home = "0.5.9"
-subxt-codegen = { version = "0.37.0", default-features = false }
-subxt-metadata = "0.37.0"
+subxt-codegen = { version = "0.38.0", default-features = false }
+subxt-metadata = "0.38.0"
 wiremock = "0.6.2"
