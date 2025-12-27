@@ -1,6 +1,5 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "bootstrap-sha": "d5c5c15ffeb3f6abd6d91c60802daa638d829eb9",
   "packages": {
     "bittensor-rs": {
       "release-type": "rust",
@@ -8,8 +7,6 @@
       "changelog-path": "CHANGELOG.md",
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,
-      "draft": false,
-      "prerelease": false,
       "include-component-in-tag": true,
       "include-v-in-tag": true
     }

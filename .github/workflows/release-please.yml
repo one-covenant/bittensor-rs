@@ -1,11 +1,9 @@
 # Release Please Workflow
 #
-# REQUIRED: Enable these repository settings first:
+# REQUIRED: Enable these repository settings:
 #   Settings > Actions > General > Workflow permissions:
 #   - Select "Read and write permissions"
 #   - Check "Allow GitHub Actions to create and approve pull requests"
-#
-# Alternatively, create a PAT with repo scope and add it as RELEASE_TOKEN secret
 
 name: Release Please
 
@@ -26,14 +24,9 @@ jobs:
             tag_name: ${{ steps.release.outputs.tag_name }}
             bittensor-rs--release_created: ${{ steps.release.outputs['bittensor-rs--release_created'] }}
         steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
-
             - uses: googleapis/release-please-action@v4
               id: release
               with:
-                  token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+                  token: ${{ secrets.GITHUB_TOKEN }}
                   config-file: release-please-config.json
                   manifest-file: .release-please-manifest.json
