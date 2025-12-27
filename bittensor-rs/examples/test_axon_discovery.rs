@@ -114,7 +114,7 @@ async fn test_direct_extrinsic(
 
     // First get a few hotkeys from the metagraph to query directly
     let runtime_api = client.runtime_api().at_latest().await?;
-    use bittensor::api::api;
+    use bittensor_rs::api::api;
 
     let metagraph = runtime_api
         .call(

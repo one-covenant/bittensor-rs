@@ -1,6 +1,6 @@
 //! Integration tests for connection reliability improvements
 
-use bittensor::{
+use bittensor_rs::{
     config::BittensorConfig, BittensorError, ConnectionManager, ConnectionPool,
     ConnectionPoolBuilder, ConnectionState, HealthChecker, RetryConfig,
 };

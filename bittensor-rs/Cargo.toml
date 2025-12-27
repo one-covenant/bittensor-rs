@@ -2,11 +2,21 @@
 name = "bittensor-rs"
 version = "0.1.0"
 edition = "2021"
+authors = ["covenant.ai"]
 description = "Standalone Rust SDK for Bittensor blockchain interactions"
-rust-version = "1.70"
+documentation = "https://docs.rs/bittensor-rs"
+homepage = "https://github.com/one-covenant/bittensor-rs"
+repository = "https://github.com/one-covenant/bittensor-rs"
+readme = "README.md"
 license = "MIT"
-repository = "https://github.com/opentensor/bittensor-rust-sdk"
-keywords = ["bittensor", "blockchain", "substrate", "cryptocurrency", "decentralized"]
+rust-version = "1.70"
+keywords = [
+    "bittensor",
+    "blockchain",
+    "substrate",
+    "cryptocurrency",
+    "decentralized",
+]
 categories = ["cryptography::cryptocurrencies", "api-bindings"]
 
 [features]

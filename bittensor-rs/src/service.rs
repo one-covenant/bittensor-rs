@@ -1,6 +1,54 @@
 //! # Bittensor Service
 //!
-//! Central service for all Bittensor chain interactions.
+//! Central service for all Bittensor chain interactions with connection pooling,
+//! automatic failover, and circuit breaker protection.
+//!
+//! The [`Service`] struct is the main entry point for interacting with the Bittensor
+//! blockchain. It manages:
+//!
+//! - **Connection pooling**: Multiple connections with automatic health checks
+//! - **Retry logic**: Exponential backoff for transient failures
+//! - **Circuit breaker**: Prevents cascade failures during outages
+//! - **Transaction signing**: Uses the configured wallet hotkey
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! use bittensor::{config::BittensorConfig, Service};
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let config = BittensorConfig::finney("my_wallet", "my_hotkey", 1);
+//!     let service = Service::new(config).await?;
+//!     
+//!     // Query metagraph
+//!     let metagraph = service.get_metagraph(1).await?;
+//!     println!("Neurons: {}", metagraph.hotkeys.len());
+//!     
+//!     // Set weights
+//!     service.set_weights(1, vec![(0, 100), (1, 200)]).await?;
+//!     
+//!     // Graceful shutdown
+//!     service.shutdown().await;
+//!     Ok(())
+//! }
+//! ```
+//!
+//! # Connection Monitoring
+//!
+//! Monitor connection health and metrics:
+//!
+//! ```rust,no_run
+//! # use bittensor::{config::BittensorConfig, Service};
+//! # async fn example(service: Service) -> Result<(), Box<dyn std::error::Error>> {
+//! let metrics = service.connection_metrics().await;
+//! println!("Healthy: {}/{}", metrics.healthy_connections, metrics.total_connections);
+//!
+//! // Force reconnect if needed
+//! service.force_reconnect().await?;
+//! # Ok(())
+//! # }
+//! ```
 
 use crate::config::BittensorConfig;
 use crate::connect::{CircuitBreaker, HealthChecker, RetryConfig, RetryNode};
