@@ -58,9 +58,9 @@ fn draw_subnet_table(f: &mut Frame, app: &mut App, area: Rect) {
         
         let cells = vec![
             Cell::from(subnet.netuid.to_string()),
-            Cell::from(subnet.subnetwork_n.to_string()),
-            Cell::from(subnet.max_allowed_uids.to_string()),
-            Cell::from(format!("{:.2}%", (subnet.emission_values as f64 / 65535.0) * 100.0)),
+            Cell::from(subnet.n.to_string()),
+            Cell::from(subnet.max_n.to_string()),
+            Cell::from("N/A".to_string()), // emission not available in SubnetInfo
             Cell::from(subnet.tempo.to_string()),
         ];
         Row::new(cells).style(style)

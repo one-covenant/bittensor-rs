@@ -99,12 +99,13 @@ impl WalletService {
     }
 
     /// Sign a message with the coldkey
-    pub fn sign_message(&self, wallet_name: &str, message: &str, password: &str) -> Result<String> {
+    pub fn sign_message(&self, wallet_name: &str, _message: &str, password: &str) -> Result<String> {
         let wallet = self.load_wallet(wallet_name)?;
         let public = wallet.get_coldkey(password)?;
         
         // For now, just return a placeholder - actual signing requires the private key
         // The Wallet struct stores encrypted mnemonic, so we'd need to derive the keypair
+        // TODO: Implement actual message signing when private key derivation is available
         Ok(format!("0x{}", hex::encode(public.0)))
     }
 

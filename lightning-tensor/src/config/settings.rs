@@ -76,12 +76,14 @@ impl Config {
             "finney" => bittensor_rs::BittensorConfig::finney(wallet_name, hotkey_name, netuid),
             "test" => bittensor_rs::BittensorConfig::testnet(wallet_name, hotkey_name, netuid),
             "local" => bittensor_rs::BittensorConfig::local(wallet_name, hotkey_name, netuid),
-            custom => bittensor_rs::BittensorConfig::custom(
-                vec![custom.to_string()],
-                wallet_name,
-                hotkey_name,
+            custom_endpoint => bittensor_rs::BittensorConfig {
+                wallet_name: wallet_name.to_string(),
+                hotkey_name: hotkey_name.to_string(),
+                network: "custom".to_string(),
                 netuid,
-            ),
+                chain_endpoint: Some(custom_endpoint.to_string()),
+                ..Default::default()
+            },
         }
     }
 }
@@ -267,4 +269,3 @@ mod tests {
         assert_eq!(parsed.network.network, config.network.network);
     }
 }
-
