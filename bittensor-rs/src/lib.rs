@@ -111,10 +111,11 @@ pub use extrinsics::{
 
 // Re-export queries
 pub use queries::{
-    fields as metagraph_fields, get_balance, get_metagraph, get_neuron, get_neuron_lite, get_stake,
-    get_stake_info_for_coldkey, get_subnet_hyperparameters, get_subnet_info,
-    get_total_network_stake, get_total_subnets, get_uid_for_hotkey, subnet_exists, Metagraph,
-    NeuronInfo, NeuronInfoLite, SelectiveMetagraph, StakeInfo, SubnetHyperparameters, SubnetInfo,
+    fields as metagraph_fields, get_all_dynamic_info, get_balance, get_metagraph, get_neuron,
+    get_neuron_lite, get_stake, get_stake_info_for_coldkey, get_subnet_hyperparameters,
+    get_subnet_info, get_total_network_stake, get_total_subnets, get_uid_for_hotkey, subnet_exists,
+    DynamicSubnetInfo, Metagraph, NeuronInfo, NeuronInfoLite, SelectiveMetagraph, StakeInfo,
+    SubnetHyperparameters, SubnetInfo,
 };
 
 // Re-export key types from our generated API

@@ -2,23 +2,59 @@
 name = "lightning-tensor"
 version = "0.1.0"
 edition = "2021"
+description = "High-performance CLI/TUI for Bittensor network"
+license = "MIT"
 
+[[bin]]
+name = "lt"
+path = "src/main.rs"
 
 [dependencies]
+# Core Bittensor dependencies (wallet functionality via bittensor-rs::wallet)
 bittensor-rs = { path = "../bittensor-rs" }
-bittensor-wallet = { path = "../bittensor-wallet" }
+
+# CLI framework
 clap = { workspace = true }
+
+# TUI framework
 crossterm = { version = "0.27", features = ["event-stream"] }
 ratatui = "0.27.0"
-thiserror = { workspace = true }
+
+# Async runtime
 tokio = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging
 log = { workspace = true }
 env_logger = { workspace = true }
 simplelog = { workspace = true }
-sp-core = { workspace = true }
-dirs.workspace = true
-futures.workspace = true
-codec.workspace = true
-hex.workspace = true
+tracing = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
 toml = "0.8.15"
-fs = "0.0.5"
+
+# Crypto
+sp-core = { workspace = true }
+hex = { workspace = true }
+codec = { workspace = true }
+
+# CLI UX
+indicatif = "0.17"
+dialoguer = "0.11"
+console = "0.15"
+tabled = "0.15"
+
+# Utilities
+dirs = { workspace = true }
+chrono = { workspace = true }
+rand = { workspace = true }
+
+[dev-dependencies]
+tokio-test = "0.4"

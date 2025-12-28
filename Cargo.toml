@@ -1,5 +1,6 @@
 [workspace]
-members = ["bittensor-rs", "bittensor-wallet", "lightning-tensor"]
+members = ["bittensor-rs", "lightning-tensor"]
+# Note: bittensor-wallet excluded due to pyo3 linking issues
 resolver = "2"
 
 [workspace.dependencies]
@@ -7,7 +8,9 @@ clap = { version = "4.5.9", features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false, features = [
     "derive",
 ] }
-parity-scale-codec = { version = "3.6.1", default-features = false, features = ["derive"] }
+parity-scale-codec = { version = "3.6.1", default-features = false, features = [
+    "derive",
+] }
 sp-core = "34.0.0"
 substrate-api-client = { version = "0.18.0", features = ["ws-client"] }
 thiserror = "1.0.62"

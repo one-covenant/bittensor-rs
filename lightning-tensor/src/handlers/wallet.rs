@@ -1,6 +1,6 @@
 use crate::app::{App, AppState, WalletOperation};
 use crate::errors::AppError;
-use bittensor_wallet::Wallet;
+use bittensor_rs::wallet::Wallet;
 use crossterm::event::KeyCode;
 use log::{debug, error};
 use sp_core::sr25519::Signature as Sr25519Signature;
