@@ -15,6 +15,7 @@ use crossterm::{
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
+use std::sync::Arc;
 
 pub use app::{App, AppState};
 
@@ -27,8 +28,8 @@ pub async fn run(ctx: AppContext) -> Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    // Create app and run it
-    let mut app = App::new(ctx)?;
+    // Create app and run it (wrap context in Arc for async sharing)
+    let mut app = App::new(Arc::new(ctx))?;
     let res = app.run(&mut terminal).await;
 
     // Restore terminal

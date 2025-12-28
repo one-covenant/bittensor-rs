@@ -1,5 +1,6 @@
 [workspace]
-members = ["bittensor-rs", "bittensor-wallet", "lightning-tensor"]
+members = ["bittensor-rs", "lightning-tensor"]
+# Note: bittensor-wallet excluded due to pyo3 linking issues
 resolver = "2"
 
 [workspace.dependencies]

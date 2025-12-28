@@ -10,9 +10,8 @@ name = "lt"
 path = "src/main.rs"
 
 [dependencies]
-# Core Bittensor dependencies
+# Core Bittensor dependencies (wallet functionality via bittensor-rs::wallet)
 bittensor-rs = { path = "../bittensor-rs" }
-bittensor-wallet = { path = "../bittensor-wallet" }
 
 # CLI framework
 clap = { workspace = true }

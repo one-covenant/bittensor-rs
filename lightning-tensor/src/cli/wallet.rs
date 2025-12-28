@@ -7,6 +7,29 @@ use crate::context::AppContext;
 use crate::errors::Result;
 use crate::services::wallet::WalletService;
 use super::OutputFormat;
+use std::path::Path;
+
+/// Read coldkey address from coldkeypub.txt file
+fn read_coldkey_address(wallet_path: &Path) -> String {
+    let coldkeypub_path = wallet_path.join("coldkeypub.txt");
+    if coldkeypub_path.exists() {
+        match std::fs::read_to_string(&coldkeypub_path) {
+            Ok(content) => {
+                // Try to parse as JSON and extract ss58Address
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                    if let Some(addr) = json.get("ss58Address").and_then(|v| v.as_str()) {
+                        return addr.to_string();
+                    }
+                }
+                // Fallback: maybe it's just a plain address
+                content.trim().to_string()
+            }
+            Err(_) => "N/A".to_string(),
+        }
+    } else {
+        "N/A (coldkeypub.txt not found)".to_string()
+    }
+}
 
 /// Wallet subcommands
 #[derive(Subcommand, Debug)]
@@ -138,7 +161,7 @@ async fn create_wallet(
     };
 
     let wallet = service.create_wallet(name, words, &password)?;
-    let address = wallet.get_coldkey_ss58().unwrap_or_else(|_| "N/A".to_string());
+    let address = wallet.hotkey().to_string(); // Hotkey address (coldkey needs unlock)
     
     match format {
         OutputFormat::Text => {
@@ -195,7 +218,7 @@ async fn show_balance(
         .ok_or_else(|| crate::errors::Error::wallet("No wallet specified"))?;
 
     let wallet = service.load_wallet(&wallet_name)?;
-    let address = wallet.get_coldkey_ss58().unwrap_or_else(|_| "N/A".to_string());
+    let address = read_coldkey_address(&wallet.path);
     
     // For balance, we need to connect to the network
     // For now, just show the address
@@ -222,7 +245,7 @@ async fn show_balance(
 
 async fn show_wallet_info(service: &WalletService, name: &str, format: OutputFormat) -> Result<()> {
     let wallet = service.load_wallet(name)?;
-    let coldkey = wallet.get_coldkey_ss58().unwrap_or_else(|_| "N/A".to_string());
+    let coldkey = read_coldkey_address(&wallet.path);
     let hotkeys = service.list_hotkeys(name)?;
     
     match format {
@@ -321,7 +344,7 @@ async fn regen_wallet(
     let password = prompt_password("Enter new wallet password: ")?;
     
     let wallet = service.regen_wallet(name, &mnemonic, &password)?;
-    let address = wallet.get_coldkey_ss58().unwrap_or_else(|_| "N/A".to_string());
+    let address = read_coldkey_address(&wallet.path);
     
     match format {
         OutputFormat::Text => {

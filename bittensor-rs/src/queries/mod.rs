@@ -17,6 +17,6 @@ pub use account::{
 pub use metagraph::{fields, get_metagraph, Metagraph, SelectiveMetagraph};
 pub use neuron::{get_neuron, get_neuron_lite, get_uid_for_hotkey, NeuronInfo, NeuronInfoLite};
 pub use subnet::{
-    get_subnet_hyperparameters, get_subnet_info, get_total_subnets, subnet_exists,
-    SubnetHyperparameters, SubnetInfo,
+    get_all_dynamic_info, get_subnet_hyperparameters, get_subnet_info, get_total_subnets,
+    subnet_exists, DynamicSubnetInfo, SubnetHyperparameters, SubnetInfo,
 };

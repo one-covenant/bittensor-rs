@@ -1,9 +1,9 @@
 //! # Wallet Service
 //!
-//! Business logic for wallet operations.
+//! Business logic for wallet operations using bittensor_rs::wallet.
 
 use crate::errors::{Error, Result};
-use bittensor_wallet::Wallet;
+use bittensor_rs::wallet::Wallet;
 use std::path::PathBuf;
 
 /// Service for wallet operations
@@ -16,33 +16,53 @@ impl WalletService {
     pub fn new(wallet_dir: PathBuf) -> Self {
         Self { wallet_dir }
     }
+    
+    /// Get the wallet directory
+    pub fn wallet_dir(&self) -> &PathBuf {
+        &self.wallet_dir
+    }
 
-    /// Create a new wallet
-    pub fn create_wallet(&self, name: &str, words: u8, password: &str) -> Result<Wallet> {
+    /// Create a new wallet with random mnemonic
+    /// Note: The new bittensor_rs wallet API creates a wallet with hotkey in one step
+    pub fn create_wallet(&self, name: &str, _words: u8, _password: &str) -> Result<Wallet> {
         let wallet_path = self.wallet_dir.join(name);
         
         if wallet_path.exists() {
             return Err(Error::WalletAlreadyExists { name: name.to_string() });
         }
         
-        // Create wallet directory
+        // Create wallet directory structure
         std::fs::create_dir_all(&wallet_path)?;
+        std::fs::create_dir_all(wallet_path.join("hotkeys"))?;
         
-        let mut wallet = Wallet::new(name, wallet_path);
-        wallet.create_new_wallet(words as u32, password)?;
+        // Create random wallet with default hotkey
+        let wallet = Wallet::create_random(name, "default")
+            .map_err(|e| Error::wallet(&format!("Failed to create wallet: {}", e)))?;
+        
+        // Save the hotkey address to coldkeypub.txt for compatibility
+        // Note: bittensor_rs wallet stores hotkey, not coldkey by default
+        let coldkeypub_path = wallet_path.join("coldkeypub.txt");
+        std::fs::write(&coldkeypub_path, wallet.hotkey().to_string())
+            .map_err(|e| Error::wallet(&format!("Failed to save coldkeypub: {}", e)))?;
         
         Ok(wallet)
     }
 
-    /// Load an existing wallet
+    /// Load an existing wallet with default hotkey
     pub fn load_wallet(&self, name: &str) -> Result<Wallet> {
+        self.load_wallet_with_hotkey(name, "default")
+    }
+    
+    /// Load an existing wallet with specific hotkey
+    pub fn load_wallet_with_hotkey(&self, name: &str, hotkey: &str) -> Result<Wallet> {
         let wallet_path = self.wallet_dir.join(name);
         
         if !wallet_path.exists() {
             return Err(Error::WalletNotFound { name: name.to_string() });
         }
         
-        Ok(Wallet::new(name, wallet_path))
+        Wallet::load_from_path(name, hotkey, &self.wallet_dir)
+            .map_err(|e| Error::wallet(&format!("Failed to load wallet: {}", e)))
     }
 
     /// List all wallets
@@ -90,23 +110,19 @@ impl WalletService {
     }
 
     /// Create a new hotkey for a wallet
-    pub fn create_hotkey(&self, wallet_name: &str, hotkey_name: &str, password: &str) -> Result<String> {
-        let mut wallet = self.load_wallet(wallet_name)?;
-        wallet.create_new_hotkey(hotkey_name, password)?;
+    pub fn create_hotkey(&self, wallet_name: &str, hotkey_name: &str, _password: &str) -> Result<String> {
+        // Create a new random wallet with the specified hotkey name
+        let wallet = Wallet::create_random(wallet_name, hotkey_name)
+            .map_err(|e| Error::wallet(&format!("Failed to create hotkey: {}", e)))?;
         
-        let address = wallet.get_hotkey_ss58(hotkey_name)?;
-        Ok(address)
+        Ok(wallet.hotkey().to_string())
     }
 
-    /// Sign a message with the coldkey
-    pub fn sign_message(&self, wallet_name: &str, _message: &str, password: &str) -> Result<String> {
+    /// Sign a message with the wallet's hotkey
+    pub fn sign_message(&self, wallet_name: &str, message: &str, _password: &str) -> Result<String> {
         let wallet = self.load_wallet(wallet_name)?;
-        let public = wallet.get_coldkey(password)?;
-        
-        // For now, just return a placeholder - actual signing requires the private key
-        // The Wallet struct stores encrypted mnemonic, so we'd need to derive the keypair
-        // TODO: Implement actual message signing when private key derivation is available
-        Ok(format!("0x{}", hex::encode(public.0)))
+        let signature = wallet.sign(message.as_bytes());
+        Ok(format!("0x{}", hex::encode(signature)))
     }
 
     /// Verify a signature
@@ -146,14 +162,20 @@ impl WalletService {
     }
 
     /// Regenerate wallet from mnemonic
-    pub fn regen_wallet(&self, name: &str, mnemonic: &str, password: &str) -> Result<Wallet> {
+    pub fn regen_wallet(&self, name: &str, mnemonic: &str, _password: &str) -> Result<Wallet> {
         let wallet_path = self.wallet_dir.join(name);
         
         // Create wallet directory if needed
         std::fs::create_dir_all(&wallet_path)?;
+        std::fs::create_dir_all(wallet_path.join("hotkeys"))?;
         
-        let mut wallet = Wallet::new(name, wallet_path);
-        wallet.regenerate_wallet(mnemonic, password)?;
+        let wallet = Wallet::from_mnemonic(name, "default", mnemonic)
+            .map_err(|e| Error::wallet(&format!("Failed to regenerate wallet: {}", e)))?;
+        
+        // Save the hotkey address
+        let coldkeypub_path = wallet_path.join("coldkeypub.txt");
+        std::fs::write(&coldkeypub_path, wallet.hotkey().to_string())
+            .map_err(|e| Error::wallet(&format!("Failed to save coldkeypub: {}", e)))?;
         
         Ok(wallet)
     }

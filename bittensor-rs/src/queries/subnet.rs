@@ -4,10 +4,11 @@
 
 use crate::api::api;
 use crate::error::BittensorError;
+use subxt::ext::codec;
 use subxt::OnlineClient;
 use subxt::PolkadotConfig;
 
-/// Subnet information
+/// Subnet information (basic)
 #[derive(Debug, Clone)]
 pub struct SubnetInfo {
     /// Subnet netuid
@@ -22,6 +23,38 @@ pub struct SubnetInfo {
     pub immunity_period: u16,
     /// Registration allowed
     pub registration_allowed: bool,
+}
+
+/// Dynamic subnet info with DTAO data (single RPC call for all subnets)
+#[derive(Debug, Clone)]
+pub struct DynamicSubnetInfo {
+    /// Subnet netuid
+    pub netuid: u16,
+    /// Subnet name (from identity or token symbol)
+    pub name: String,
+    /// Token symbol (e.g., "α", "τ")
+    pub symbol: String,
+    /// TAO emission per block (RAO)
+    pub tao_in_emission: u64,
+    /// Moving price (EMA) - used for emission weight calculation
+    /// Emission % = moving_price / Σ all_moving_prices × 100
+    pub moving_price: f64,
+    /// Price in TAO (tao_in / alpha_in)
+    pub price_tao: f64,
+    /// Alpha in pool (RAO)
+    pub alpha_in: u64,
+    /// Alpha out pool (RAO)  
+    pub alpha_out: u64,
+    /// TAO in pool (RAO)
+    pub tao_in: u64,
+    /// Owner hotkey SS58
+    pub owner_hotkey: String,
+    /// Owner coldkey SS58
+    pub owner_coldkey: String,
+    /// Tempo (blocks per epoch)
+    pub tempo: u16,
+    /// Block number when subnet was registered
+    pub registered_at: u64,
 }
 
 /// Subnet hyperparameters
@@ -310,6 +343,90 @@ pub async fn subnet_exists(
 
     Ok(exists)
 }
+
+/// Get all subnet dynamic info in a single RPC call
+///
+/// This is MUCH faster than calling get_subnet_info for each subnet.
+/// Returns DTAO pricing, emission, identity, and pool info for all subnets.
+pub async fn get_all_dynamic_info(
+    client: &OnlineClient<PolkadotConfig>,
+) -> Result<Vec<DynamicSubnetInfo>, BittensorError> {
+    let runtime_api = client.runtime_api().at_latest().await.map_err(|e| {
+        BittensorError::RpcError {
+            message: format!("Failed to get runtime API: {}", e),
+        }
+    })?;
+
+    let payload = api::apis().subnet_info_runtime_api().get_all_dynamic_info();
+    let result = runtime_api.call(payload).await.map_err(|e| {
+        BittensorError::RpcError {
+            message: format!("Failed to call get_all_dynamic_info: {}", e),
+        }
+    })?;
+
+    let subnets: Vec<DynamicSubnetInfo> = result
+        .into_iter()
+        .filter_map(|opt| opt)
+        .map(|info| {
+            // Decode subnet name from compact bytes
+            let name = decode_compact_bytes(&info.subnet_name);
+            let symbol = decode_compact_bytes(&info.token_symbol);
+
+            // Extract identity name if available (identity uses plain Vec<u8>)
+            let display_name = info
+                .subnet_identity
+                .as_ref()
+                .and_then(|id| {
+                    let n = String::from_utf8_lossy(&id.subnet_name).to_string();
+                    if n.is_empty() { None } else { Some(n) }
+                })
+                .unwrap_or_else(|| name.clone());
+
+            // Calculate price from pool ratio: tao_in / alpha_in
+            // This is the actual exchange rate (how much TAO per 1 Alpha)
+            let alpha_in_f = info.alpha_in as f64 / 1_000_000_000.0; // Convert RAO to TAO
+            let tao_in_f = info.tao_in as f64 / 1_000_000_000.0;
+            
+            let price_tao = if info.netuid == 0 {
+                1.0 // Root subnet always 1:1
+            } else if alpha_in_f > 0.0 {
+                tao_in_f / alpha_in_f
+            } else {
+                0.0
+            };
+
+            // Convert FixedI128<U32> to f64
+            // The type parameter from metadata is U32 (32 fractional bits)
+            // moving_price = bits / 2^32
+            let moving_price = (info.moving_price.bits as f64) / ((1u64 << 32) as f64);
+
+            DynamicSubnetInfo {
+                netuid: info.netuid,
+                name: if display_name.is_empty() { format!("SN{}", info.netuid) } else { display_name },
+                symbol: if symbol.is_empty() { "α".to_string() } else { symbol },
+                tao_in_emission: info.tao_in_emission,
+                moving_price,
+                price_tao,
+                alpha_in: info.alpha_in,
+                alpha_out: info.alpha_out,
+                tao_in: info.tao_in,
+                owner_hotkey: format!("{}", info.owner_hotkey),
+                owner_coldkey: format!("{}", info.owner_coldkey),
+                tempo: info.tempo,
+                registered_at: info.network_registered_at,
+            }
+        })
+        .collect();
+
+    Ok(subnets)
+}
+
+/// Decode compact bytes (Vec<Compact<u8>>) to String
+fn decode_compact_bytes(bytes: &[codec::Compact<u8>]) -> String {
+    let raw: Vec<u8> = bytes.iter().map(|c| c.0).collect();
+    String::from_utf8_lossy(&raw).to_string()
+}
+
 
 #[cfg(test)]
 mod tests {

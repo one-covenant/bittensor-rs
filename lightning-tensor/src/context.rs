@@ -6,7 +6,7 @@
 use crate::config::Config;
 use crate::errors::{Error, Result};
 use bittensor_rs::Service;
-use bittensor_wallet::Wallet;
+use bittensor_rs::wallet::Wallet;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -104,25 +104,26 @@ impl AppContext {
 
     /// Connect with default wallet settings from config
     pub async fn connect_with_defaults(&self) -> Result<Arc<Service>> {
+        // Use defaults from config, or fallback to sensible defaults for read-only access
         let wallet_name = self
             .config
             .wallet
             .default_wallet
             .as_ref()
-            .ok_or_else(|| Error::config("No default wallet configured"))?
-            .clone();
+            .map(|s| s.as_str())
+            .unwrap_or("default");
 
         let hotkey_name = self
             .config
             .wallet
             .default_hotkey
             .as_ref()
-            .ok_or_else(|| Error::config("No default hotkey configured"))?
-            .clone();
+            .map(|s| s.as_str())
+            .unwrap_or("default");
 
         let netuid = self.config.wallet.default_netuid;
 
-        self.connect(&wallet_name, &hotkey_name, netuid).await
+        self.connect(wallet_name, hotkey_name, netuid).await
     }
 
     /// Disconnect from the network
@@ -136,7 +137,7 @@ impl AppContext {
     }
 
     /// Get the current wallet or return error
-    pub async fn require_wallet(&self) -> Result<bittensor_wallet::Wallet> {
+    pub async fn require_wallet(&self) -> Result<bittensor_rs::wallet::Wallet> {
         self.wallet
             .read()
             .await
@@ -144,8 +145,13 @@ impl AppContext {
             .ok_or_else(|| Error::wallet("No wallet loaded. Use 'lt wallet load' first."))
     }
 
-    /// Load a wallet by name
+    /// Load a wallet by name with default hotkey
     pub async fn load_wallet(&self, name: &str) -> Result<Wallet> {
+        self.load_wallet_with_hotkey(name, "default").await
+    }
+    
+    /// Load a wallet by name with specific hotkey
+    pub async fn load_wallet_with_hotkey(&self, name: &str, hotkey: &str) -> Result<Wallet> {
         let wallet_path = self.wallet_dir.join(name);
 
         if !wallet_path.exists() {
@@ -154,7 +160,8 @@ impl AppContext {
             });
         }
 
-        let wallet = Wallet::new(name, wallet_path);
+        let wallet = Wallet::load_from_path(name, hotkey, &self.wallet_dir)
+            .map_err(|e| Error::wallet(&format!("Failed to load wallet: {}", e)))?;
         *self.wallet.write().await = Some(wallet.clone());
 
         Ok(wallet)

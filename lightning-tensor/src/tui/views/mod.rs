@@ -85,12 +85,14 @@ fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
     };
     
     let help_text = match app.state {
-        AppState::Home => "w:Wallet s:Stake n:Subnets t:Transfer g:Weights r:Root q:Quit",
-        AppState::Wallet => "↑/↓:Navigate Enter:Select c:Create b:Balance Esc:Back",
-        AppState::Stake => "a:Add r:Remove l:List Esc:Back",
-        AppState::Subnet => "↑/↓:Navigate Enter:Metagraph r:Refresh Esc:Back",
-        AppState::Metagraph => "r:Refresh Esc:Back",
-        _ => "Esc:Back q:Quit",
+        AppState::Home => "w:Wallet s:Stake n:Subnets m:Metagraph t:Transfer c:Connect q:Quit",
+        AppState::Wallet => "↑↓:Navigate Enter:Select b:Balance B:All Esc:Back",
+        AppState::Stake => "a:Add r:Remove Esc:Back",
+        AppState::Subnet => "↑↓:Navigate Enter:Metagraph r:Refresh Esc:Back",
+        AppState::Metagraph => "↑↓:Navigate PgUp/Dn:Page r:Refresh Esc:Back",
+        AppState::Transfer => "t:Transfer Esc:Back",
+        AppState::Weights => "s:Set Esc:Back",
+        AppState::Root => "r:Register Esc:Back",
     };
     
     let loading = if app.is_loading { " ⟳" } else { "" };

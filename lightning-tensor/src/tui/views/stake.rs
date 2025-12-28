@@ -29,7 +29,7 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
 }
 
 fn draw_stake_summary(f: &mut Frame, app: &App, area: Rect) {
-    let wallet_name = app.selected_wallet()
+    let wallet_name = app.selected_wallet_info()
         .map(|w| w.name.as_str())
         .unwrap_or("No wallet selected");
     

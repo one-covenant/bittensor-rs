@@ -773,6 +773,40 @@ impl Service {
         self.config.netuid
     }
 
+    /// Get a healthy client from the connection pool for direct queries.
+    ///
+    /// This provides access to the underlying chain client for making
+    /// custom queries not directly supported by the Service API.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Arc<OnlineClient<PolkadotConfig>>, BittensorError>` - The chain client
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use bittensor::Service;
+    /// # use bittensor::config::BittensorConfig;
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let config = BittensorConfig::default();
+    /// # let service = Service::new(config).await?;
+    /// let client = service.client().await?;
+    /// // Use client for custom queries
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn client(
+        &self,
+    ) -> Result<std::sync::Arc<subxt::OnlineClient<subxt::PolkadotConfig>>, BittensorError> {
+        self.connection_pool
+            .get_healthy_client()
+            .await
+            .map_err(|e| BittensorError::NetworkError {
+                message: format!("Failed to get healthy client: {}", e),
+            })
+    }
+
     /// Sign data with the service's signer (hotkey)
     ///
     /// This method signs arbitrary data with the validator/miner's hotkey.

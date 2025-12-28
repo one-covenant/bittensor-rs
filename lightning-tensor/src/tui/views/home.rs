@@ -16,8 +16,8 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Percentage(50),
-            Constraint::Percentage(30),
+            Constraint::Percentage(45),
+            Constraint::Percentage(35),
             Constraint::Percentage(20),
         ])
         .split(area);
@@ -26,7 +26,7 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
     draw_logo(f, app, chunks[0]);
     
     // Draw menu
-    draw_menu(f, chunks[1]);
+    draw_menu(f, app, chunks[1]);
     
     // Draw messages
     draw_messages(f, app, chunks[2]);
@@ -58,7 +58,13 @@ fn draw_logo(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_widget(logo_widget, area);
 }
 
-fn draw_menu(f: &mut Frame, area: Rect) {
+fn draw_menu(f: &mut Frame, app: &App, area: Rect) {
+    let connection_status = if app.is_connected {
+        Span::styled("● Connected", Style::default().fg(Color::Green))
+    } else {
+        Span::styled("○ Disconnected", Style::default().fg(Color::Red))
+    };
+    
     let menu_items = vec![
         Line::from(vec![
             Span::styled(
@@ -70,6 +76,13 @@ fn draw_menu(f: &mut Frame, area: Rect) {
         ]),
         Line::from(""),
         Line::from(vec![
+            Span::styled("Network: ", Style::default().fg(Color::Gray)),
+            Span::styled(app.ctx.network_name(), Style::default().fg(Color::Cyan)),
+            Span::raw("  "),
+            connection_status,
+        ]),
+        Line::from(""),
+        Line::from(vec![
             Span::styled("[ w ] ", Style::default().fg(Color::Yellow)),
             Span::raw("Wallet"),
             Span::styled("   [ s ] ", Style::default().fg(Color::Yellow)),
@@ -78,16 +91,20 @@ fn draw_menu(f: &mut Frame, area: Rect) {
             Span::raw("Subnets"),
         ]),
         Line::from(vec![
-            Span::styled("[ t ] ", Style::default().fg(Color::Yellow)),
+            Span::styled("[ m ] ", Style::default().fg(Color::Yellow)),
+            Span::raw("Metagraph"),
+            Span::styled(" [ t ] ", Style::default().fg(Color::Yellow)),
             Span::raw("Transfer"),
             Span::styled(" [ g ] ", Style::default().fg(Color::Yellow)),
             Span::raw("Weights"),
-            Span::styled(" [ r ] ", Style::default().fg(Color::Yellow)),
-            Span::raw("Root"),
         ]),
         Line::from(""),
         Line::from(vec![
-            Span::styled("[ q ] ", Style::default().fg(Color::Red)),
+            Span::styled("[ c ] ", Style::default().fg(Color::Cyan)),
+            Span::raw("Connect"),
+            Span::styled("  [ r ] ", Style::default().fg(Color::Yellow)),
+            Span::raw("Root"),
+            Span::styled("  [ q ] ", Style::default().fg(Color::Red)),
             Span::raw("Quit"),
         ]),
     ];

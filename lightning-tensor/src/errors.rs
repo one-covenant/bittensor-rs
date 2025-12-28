@@ -113,7 +113,7 @@ pub enum Error {
     BittensorSdk(#[from] bittensor_rs::BittensorError),
 
     #[error("Wallet library error: {0}")]
-    WalletLib(#[from] bittensor_wallet::WalletError),
+    WalletLib(#[from] bittensor_rs::wallet::KeyfileError),
 }
 
 impl Error {
