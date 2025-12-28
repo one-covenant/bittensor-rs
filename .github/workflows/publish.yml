@@ -6,6 +6,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  BITTENSOR_OFFLINE: "1"  # Use bundled metadata for reproducible builds
 
 jobs:
   publish:

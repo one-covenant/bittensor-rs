@@ -21,6 +21,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  BITTENSOR_OFFLINE: "1"  # Use bundled metadata
 
 jobs:
   build:
@@ -50,9 +51,7 @@ jobs:
 
       - name: Build documentation
         run: |
-          cargo doc --no-deps --workspace --document-private-items
-        env:
-          RUSTDOCFLAGS: "--enable-index-page -Zunstable-options"
+          cargo doc --no-deps -p bittensor-rs --document-private-items
 
       - name: Add redirect
         run: |
@@ -75,4 +74,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-

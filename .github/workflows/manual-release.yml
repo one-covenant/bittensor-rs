@@ -60,5 +60,6 @@ jobs:
         working-directory: bittensor-rs
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          BITTENSOR_OFFLINE: "1"  # Use bundled metadata
         run: cargo publish
 
