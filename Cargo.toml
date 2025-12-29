@@ -1,5 +1,5 @@
 [workspace]
-members = ["bittensor-rs", "bittensor-wallet", "lightning-tensor"]
+members = ["bittensor-rs", "lightning-tensor"]
 resolver = "2"
 
 [workspace.dependencies]
