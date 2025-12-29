@@ -16,4 +16,3 @@ impl Default for CrowdService {
         Self::new()
     }
 }
-

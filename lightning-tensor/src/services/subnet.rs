@@ -16,4 +16,3 @@ impl Default for SubnetService {
         Self::new()
     }
 }
-

@@ -1,18 +1,22 @@
 //! # TUI Views
 //!
-//! Feature-specific views for the TUI.
+//! Feature-specific views for the TUI with cyberpunk styling.
 
 mod home;
-mod wallet;
+mod metagraph;
+mod root;
 mod stake;
 mod subnet;
-mod metagraph;
+mod transfer;
+mod wallet;
+mod weights;
 
 use crate::tui::app::{App, AppState};
 use crate::tui::components::InputField;
+use crate::tui::theme::{colors, symbols};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame,
@@ -24,9 +28,9 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         .direction(Direction::Vertical)
         .margin(1)
         .constraints([
-            Constraint::Length(3),   // Header
-            Constraint::Min(0),      // Main content
-            Constraint::Length(3),   // Status bar
+            Constraint::Length(3), // Header
+            Constraint::Min(0),    // Main content
+            Constraint::Length(3), // Status bar
         ])
         .split(f.size());
 
@@ -40,9 +44,9 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         AppState::Stake => stake::draw(f, app, chunks[1]),
         AppState::Subnet => subnet::draw(f, app, chunks[1]),
         AppState::Metagraph => metagraph::draw(f, app, chunks[1]),
-        AppState::Transfer => draw_placeholder(f, "Transfer", chunks[1]),
-        AppState::Weights => draw_placeholder(f, "Weights", chunks[1]),
-        AppState::Root => draw_placeholder(f, "Root Network", chunks[1]),
+        AppState::Transfer => transfer::draw(f, app, chunks[1]),
+        AppState::Weights => weights::draw(f, app, chunks[1]),
+        AppState::Root => root::draw(f, app, chunks[1]),
     }
 
     // Draw status bar
@@ -54,93 +58,142 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
 }
 
-/// Draw the header
+/// Draw the header with cyberpunk styling
 fn draw_header(f: &mut Frame, app: &App, area: Rect) {
     let network = app.ctx.network_name();
-    let title = format!("⚡ Lightning Tensor │ {}", network);
-    
-    let header = Paragraph::new(title)
-        .style(
+    let lightning = app.animation_state.lightning_pulse();
+
+    let title_spans = vec![
+        Span::styled(lightning, Style::default().fg(colors::VOLT)),
+        Span::styled(" ", Style::default()),
+        Span::styled(
+            "LIGHTNING",
             Style::default()
-                .fg(Color::Yellow)
+                .fg(colors::LIGHTNING)
                 .add_modifier(Modifier::BOLD),
-        )
+        ),
+        Span::styled(
+            " TENSOR",
+            Style::default()
+                .fg(colors::PLASMA)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format!(" {} ", symbols::VERTICAL),
+            Style::default().fg(colors::TEXT_TERTIARY),
+        ),
+        Span::styled(network, Style::default().fg(colors::TEXT_ACCENT)),
+        Span::styled(" ", Style::default()),
+        Span::styled(lightning, Style::default().fg(colors::VOLT)),
+    ];
+
+    let header = Paragraph::new(Line::from(title_spans))
         .alignment(ratatui::layout::Alignment::Center)
-        .block(Block::default().borders(Borders::ALL));
-    
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(ratatui::widgets::BorderType::Rounded)
+                .border_style(Style::default().fg(colors::VOLT))
+                .style(Style::default().bg(colors::BG_PANEL)),
+        );
+
     f.render_widget(header, area);
 }
 
 /// Draw the status bar
 fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
     let state_name = match app.state {
-        AppState::Home => "Home",
-        AppState::Wallet => "Wallet",
-        AppState::Stake => "Stake",
-        AppState::Subnet => "Subnets",
-        AppState::Metagraph => "Metagraph",
-        AppState::Transfer => "Transfer",
-        AppState::Weights => "Weights",
-        AppState::Root => "Root",
+        AppState::Home => "HOME",
+        AppState::Wallet => "WALLET",
+        AppState::Stake => "STAKE",
+        AppState::Subnet => "SUBNETS",
+        AppState::Metagraph => "METAGRAPH",
+        AppState::Transfer => "TRANSFER",
+        AppState::Weights => "WEIGHTS",
+        AppState::Root => "ROOT",
     };
-    
+
     let help_text = match app.state {
         AppState::Home => "w:Wallet s:Stake n:Subnets m:Metagraph t:Transfer c:Connect q:Quit",
         AppState::Wallet => "↑↓:Navigate Enter:Select b:Balance B:All Esc:Back",
         AppState::Stake => "a:Add r:Remove Esc:Back",
         AppState::Subnet => "↑↓:Navigate Enter:Metagraph r:Refresh Esc:Back",
         AppState::Metagraph => "↑↓:Navigate PgUp/Dn:Page r:Refresh Esc:Back",
-        AppState::Transfer => "t:Transfer Esc:Back",
-        AppState::Weights => "s:Set Esc:Back",
-        AppState::Root => "r:Register Esc:Back",
+        AppState::Transfer => "d:Dest a:Amount Enter:Send Esc:Back",
+        AppState::Weights => "u:UIDs w:Weights Enter:Submit Esc:Back",
+        AppState::Root => "r:Register v:Validators F5:Refresh Esc:Back",
     };
-    
-    let loading = if app.is_loading { " ⟳" } else { "" };
-    
-    let status = Line::from(vec![
+
+    // Connection status
+    let (conn_icon, conn_text) = app.animation_state.connection_indicator(app.is_connected);
+    let conn_color = if app.is_connected {
+        colors::SUCCESS
+    } else {
+        colors::ERROR
+    };
+
+    let loading = if app.is_loading {
+        vec![
+            Span::styled(" ", Style::default()),
+            Span::styled(
+                app.animation_state.spinner_char().to_string(),
+                Style::default().fg(colors::LIGHTNING),
+            ),
+        ]
+    } else {
+        vec![]
+    };
+
+    let mut status_spans = vec![
         Span::styled(
             format!(" {} ", state_name),
-            Style::default().fg(Color::Black).bg(Color::Yellow),
+            Style::default()
+                .fg(colors::BG_DEEP)
+                .bg(colors::VOLT)
+                .add_modifier(Modifier::BOLD),
         ),
-        Span::raw(" │ "),
-        Span::styled(help_text, Style::default().fg(Color::Gray)),
-        Span::styled(loading, Style::default().fg(Color::Yellow)),
-    ]);
-    
-    let status_bar = Paragraph::new(status)
-        .block(Block::default().borders(Borders::ALL));
-    
+        Span::styled(
+            format!(" {} ", symbols::VERTICAL),
+            Style::default().fg(colors::TEXT_TERTIARY),
+        ),
+        Span::styled(conn_icon, Style::default().fg(conn_color)),
+        Span::styled(
+            format!(" {} ", conn_text),
+            Style::default().fg(colors::TEXT_TERTIARY),
+        ),
+        Span::styled(
+            format!("{} ", symbols::VERTICAL),
+            Style::default().fg(colors::TEXT_TERTIARY),
+        ),
+        Span::styled(help_text, Style::default().fg(colors::TEXT_SECONDARY)),
+    ];
+
+    status_spans.extend(loading);
+
+    let status_bar = Paragraph::new(Line::from(status_spans)).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(ratatui::widgets::BorderType::Rounded)
+            .border_style(Style::default().fg(colors::TEXT_TERTIARY))
+            .style(Style::default().bg(colors::BG_PANEL)),
+    );
+
     f.render_widget(status_bar, area);
 }
 
-/// Draw input overlay
+/// Draw input overlay with cyberpunk styling
 fn draw_input_overlay(f: &mut Frame, app: &App, area: Rect) {
     // Create a centered input box
-    let input_area = centered_rect(60, 15, area);
-    
+    let input_area = centered_rect(60, 20, area);
+
     // Clear background
     f.render_widget(ratatui::widgets::Clear, input_area);
-    
+
     let input = InputField::new(&app.input_prompt, &app.input_buffer)
         .password(app.is_password_input)
         .focused(true);
-    
-    input.render(f, input_area);
-}
 
-/// Draw placeholder for unimplemented views
-fn draw_placeholder(f: &mut Frame, title: &str, area: Rect) {
-    let text = format!("{} view - Coming soon!", title);
-    let placeholder = Paragraph::new(text)
-        .style(Style::default().fg(Color::Gray))
-        .alignment(ratatui::layout::Alignment::Center)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(title),
-        );
-    
-    f.render_widget(placeholder, area);
+    input.render(f, input_area);
 }
 
 /// Create a centered rectangle
@@ -163,4 +216,3 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         ])
         .split(popup_layout[1])[1]
 }
-

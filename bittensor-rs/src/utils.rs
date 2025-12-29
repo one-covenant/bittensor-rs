@@ -8,8 +8,8 @@
 use crate::error::BittensorError;
 use crate::types::Hotkey;
 use crate::AccountId;
-use std::str::FromStr;
 use sp_core::{sr25519, Pair};
+use std::str::FromStr;
 
 // Weight-related types
 

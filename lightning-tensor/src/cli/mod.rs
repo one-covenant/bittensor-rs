@@ -2,16 +2,16 @@
 //!
 //! Command-line interface implementation using clap.
 
-pub mod wallet;
-pub mod stake;
-pub mod transfer;
-pub mod subnet;
-pub mod weights;
-pub mod root;
 pub mod crowd;
+pub mod root;
+pub mod stake;
+pub mod subnet;
+pub mod transfer;
+pub mod wallet;
+pub mod weights;
 
-use clap::{Parser, Subcommand};
 use crate::errors::Result;
+use clap::{Parser, Subcommand};
 
 /// Lightning Tensor - High-performance CLI for Bittensor
 #[derive(Parser, Debug)]
@@ -60,7 +60,7 @@ pub enum OutputFormat {
 pub enum Commands {
     /// Launch interactive TUI
     Tui,
-    
+
     /// Wallet operations
     #[command(subcommand)]
     Wallet(wallet::WalletCommand),
@@ -93,8 +93,7 @@ impl Cli {
     /// Execute the CLI command
     pub async fn execute(self) -> Result<()> {
         // Build context with CLI options
-        let mut builder = crate::context::AppContextBuilder::new()
-            .with_network(&self.network);
+        let mut builder = crate::context::AppContextBuilder::new().with_network(&self.network);
 
         if let Some(wallet) = &self.wallet {
             builder = builder.with_wallet(wallet);
@@ -109,30 +108,14 @@ impl Cli {
         let ctx = builder.build()?;
 
         match self.command {
-            Commands::Tui => {
-                crate::tui::run(ctx).await
-            }
-            Commands::Wallet(cmd) => {
-                wallet::execute(&ctx, cmd, self.output).await
-            }
-            Commands::Stake(cmd) => {
-                stake::execute(&ctx, cmd, self.output).await
-            }
-            Commands::Transfer(args) => {
-                transfer::execute(&ctx, args, self.output).await
-            }
-            Commands::Subnet(cmd) => {
-                subnet::execute(&ctx, cmd, self.output).await
-            }
-            Commands::Weights(cmd) => {
-                weights::execute(&ctx, cmd, self.output).await
-            }
-            Commands::Root(cmd) => {
-                root::execute(&ctx, cmd, self.output).await
-            }
-            Commands::Crowd(cmd) => {
-                crowd::execute(&ctx, cmd, self.output).await
-            }
+            Commands::Tui => crate::tui::run(ctx).await,
+            Commands::Wallet(cmd) => wallet::execute(&ctx, cmd, self.output).await,
+            Commands::Stake(cmd) => stake::execute(&ctx, cmd, self.output).await,
+            Commands::Transfer(args) => transfer::execute(&ctx, args, self.output).await,
+            Commands::Subnet(cmd) => subnet::execute(&ctx, cmd, self.output).await,
+            Commands::Weights(cmd) => weights::execute(&ctx, cmd, self.output).await,
+            Commands::Root(cmd) => root::execute(&ctx, cmd, self.output).await,
+            Commands::Crowd(cmd) => crowd::execute(&ctx, cmd, self.output).await,
         }
     }
 }
@@ -142,4 +125,3 @@ pub async fn run() -> Result<()> {
     let cli = Cli::parse();
     cli.execute().await
 }
-

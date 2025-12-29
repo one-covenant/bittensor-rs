@@ -2,10 +2,10 @@
 //!
 //! Command-line interface for TAO transfers.
 
-use clap::Args;
+use super::OutputFormat;
 use crate::context::AppContext;
 use crate::errors::Result;
-use super::OutputFormat;
+use clap::Args;
 
 /// Transfer command arguments
 #[derive(Args, Debug)]
@@ -13,15 +13,15 @@ pub struct TransferArgs {
     /// Destination address
     #[arg(short = 't', long)]
     pub to: String,
-    
+
     /// Amount in TAO
     #[arg(short, long)]
     pub amount: f64,
-    
+
     /// Keep sender account alive (maintain existential deposit)
     #[arg(long, default_value = "true")]
     pub keep_alive: bool,
-    
+
     /// Skip confirmation prompt
     #[arg(short = 'y', long)]
     pub yes: bool,
@@ -46,6 +46,6 @@ pub async fn execute(_ctx: &AppContext, args: TransferArgs, format: OutputFormat
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
-    
+
     Ok(())
 }

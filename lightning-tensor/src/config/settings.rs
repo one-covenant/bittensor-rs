@@ -8,6 +8,7 @@ use std::path::PathBuf;
 
 /// Main application configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct Config {
     /// Network configuration
     #[serde(default)]
@@ -22,15 +23,6 @@ pub struct Config {
     pub ui: UiConfig,
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            network: NetworkConfig::default(),
-            wallet: WalletConfig::default(),
-            ui: UiConfig::default(),
-        }
-    }
-}
 
 impl Config {
     /// Load configuration from file

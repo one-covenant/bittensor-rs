@@ -102,10 +102,10 @@ async fn generate_metadata(network: &str, endpoint: &str) {
 }
 
 async fn fetch_metadata_bytes(url: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    use subxt::backend::rpc::RpcClient;
     use subxt::backend::legacy::LegacyRpcMethods;
+    use subxt::backend::rpc::RpcClient;
     use subxt::PolkadotConfig;
-    
+
     // Connect via RPC and fetch raw metadata bytes
     let rpc_client = RpcClient::from_insecure_url(url).await?;
     let rpc = LegacyRpcMethods::<PolkadotConfig>::new(rpc_client);
@@ -113,4 +113,3 @@ async fn fetch_metadata_bytes(url: &str) -> Result<Vec<u8>, Box<dyn std::error::
     // Convert the response to bytes
     Ok(metadata_response.into_raw())
 }
-

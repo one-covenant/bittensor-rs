@@ -2,10 +2,10 @@
 //!
 //! Command-line interface for crowdfunding operations.
 
-use clap::Subcommand;
+use super::OutputFormat;
 use crate::context::AppContext;
 use crate::errors::Result;
-use super::OutputFormat;
+use clap::Subcommand;
 
 /// Crowdfunding subcommands
 #[derive(Subcommand, Debug)]
@@ -14,52 +14,52 @@ pub enum CrowdCommand {
     Create {
         /// Campaign name/description
         name: String,
-        
+
         /// Target amount in TAO
         #[arg(short, long)]
         target: f64,
-        
+
         /// Duration in blocks
         #[arg(short, long)]
         duration: u32,
     },
-    
+
     /// Contribute to a campaign
     Contribute {
         /// Campaign ID
         campaign_id: u64,
-        
+
         /// Amount in TAO
         amount: f64,
     },
-    
+
     /// View campaign details
     View {
         /// Campaign ID (show all if not specified)
         campaign_id: Option<u64>,
     },
-    
+
     /// Dissolve a campaign (creator only)
     Dissolve {
         /// Campaign ID
         campaign_id: u64,
-        
+
         /// Skip confirmation
         #[arg(short = 'y', long)]
         yes: bool,
     },
-    
+
     /// Request refund from failed campaign
     Refund {
         /// Campaign ID
         campaign_id: u64,
     },
-    
+
     /// Update campaign details
     Update {
         /// Campaign ID
         campaign_id: u64,
-        
+
         /// New description
         #[arg(long)]
         description: Option<String>,
@@ -69,24 +69,24 @@ pub enum CrowdCommand {
 /// Execute crowd command
 pub async fn execute(ctx: &AppContext, cmd: CrowdCommand, format: OutputFormat) -> Result<()> {
     match cmd {
-        CrowdCommand::Create { name, target, duration } => {
-            create_campaign(ctx, &name, target, duration, format).await
-        }
-        CrowdCommand::Contribute { campaign_id, amount } => {
-            contribute(ctx, campaign_id, amount, format).await
-        }
-        CrowdCommand::View { campaign_id } => {
-            view_campaigns(ctx, campaign_id, format).await
-        }
+        CrowdCommand::Create {
+            name,
+            target,
+            duration,
+        } => create_campaign(ctx, &name, target, duration, format).await,
+        CrowdCommand::Contribute {
+            campaign_id,
+            amount,
+        } => contribute(ctx, campaign_id, amount, format).await,
+        CrowdCommand::View { campaign_id } => view_campaigns(ctx, campaign_id, format).await,
         CrowdCommand::Dissolve { campaign_id, yes } => {
             dissolve_campaign(ctx, campaign_id, yes, format).await
         }
-        CrowdCommand::Refund { campaign_id } => {
-            request_refund(ctx, campaign_id, format).await
-        }
-        CrowdCommand::Update { campaign_id, description } => {
-            update_campaign(ctx, campaign_id, description, format).await
-        }
+        CrowdCommand::Refund { campaign_id } => request_refund(ctx, campaign_id, format).await,
+        CrowdCommand::Update {
+            campaign_id,
+            description,
+        } => update_campaign(ctx, campaign_id, description, format).await,
     }
 }
 
@@ -180,11 +180,7 @@ async fn dissolve_campaign(
     Ok(())
 }
 
-async fn request_refund(
-    _ctx: &AppContext,
-    campaign_id: u64,
-    format: OutputFormat,
-) -> Result<()> {
+async fn request_refund(_ctx: &AppContext, campaign_id: u64, format: OutputFormat) -> Result<()> {
     match format {
         OutputFormat::Text => {
             println!("⚠️  Crowdfunding not yet implemented in bittensor-rs");
@@ -223,4 +219,3 @@ async fn update_campaign(
     }
     Ok(())
 }
-

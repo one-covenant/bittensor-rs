@@ -9,8 +9,8 @@
 
 use crate::error::BittensorError;
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 use sp_core::{sr25519, Pair};
+use std::path::Path;
 use thiserror::Error;
 
 /// Errors that can occur when loading keyfiles

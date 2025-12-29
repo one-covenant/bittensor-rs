@@ -31,4 +31,3 @@ pub fn default_wallet_dir() -> Result<PathBuf> {
 pub fn config_file_path() -> Result<PathBuf> {
     default_config_dir().map(|p| p.join(CONFIG_FILE_NAME))
 }
-

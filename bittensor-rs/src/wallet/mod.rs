@@ -28,8 +28,8 @@ pub use signer::WalletSigner;
 use crate::error::BittensorError;
 use crate::types::Hotkey;
 use crate::AccountId;
-use std::path::{Path, PathBuf};
 use sp_core::{sr25519, Pair};
+use std::path::{Path, PathBuf};
 
 /// Bittensor wallet for managing keys and signing transactions
 ///
