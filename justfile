@@ -6,45 +6,55 @@ export RUST_BIN_DIR := "target/x86_64-unknown-linux-gnu"
 export TARGET := "x86_64-unknown-linux-gnu"
 export RUSTV := "stable"
 export RELEASE_NAME := "development"
+export BITTENSOR_OFFLINE := "1"
 
+# Format check (matches CI)
 fmt:
-  @echo "Running cargo fmt..."
-  cargo +{{RUSTV}} fmt --all
+  @echo "Running cargo fmt check..."
+  cargo +{{RUSTV}} fmt -p bittensor-rs -- --check
 
+# Format fix
+fmt-fix:
+  @echo "Running cargo fmt..."
+  cargo +{{RUSTV}} fmt -p bittensor-rs
+
+# Check (matches CI scope)
 check:
   @echo "Running cargo check..."
-  cargo +{{RUSTV}} check --workspace
+  cargo +{{RUSTV}} check -p bittensor-rs --all-features
 
+# Test (matches CI)
 test:
   @echo "Running cargo test..."
-  cargo +{{RUSTV}} test --workspace
+  cargo +{{RUSTV}} test -p bittensor-rs --all-features
 
-benchmarks:
-  @echo "Running cargo test with benchmarks..."
-  cargo +{{RUSTV}} test --workspace --features=runtime-benchmarks
-
+# Clippy (matches CI - strict, all warnings are errors)
 clippy:
   @echo "Running cargo clippy..."
-  cargo +{{RUSTV}}  clippy --workspace --all-targets -- \
-                            -D clippy::todo \
-                            -D clippy::unimplemented
+  cargo +{{RUSTV}} clippy -p bittensor-rs --all-features -- -D warnings
 
+# Clippy with auto-fix
 clippy-fix:
-    @echo "Running cargo clippy with automatic fixes on potentially dirty code..."
-    cargo +{{RUSTV}} clippy --fix --allow-dirty --allow-staged --workspace --all-targets -- \
-        -A clippy::todo \
-        -A clippy::unimplemented \
-        -A clippy::indexing_slicing
+  @echo "Running cargo clippy with automatic fixes..."
+  cargo +{{RUSTV}} clippy --fix --allow-dirty --allow-staged -p bittensor-rs --all-features -- -A warnings
 
+# Cargo fix
 fix:
   @echo "Running cargo fix..."
-  cargo +{{RUSTV}} fix --workspace
-  git diff --exit-code || (echo "There are local changes after running 'cargo fix --workspace' ❌" && exit 1)
+  cargo +{{RUSTV}} fix -p bittensor-rs --allow-dirty --allow-staged
 
-lint:
-  @echo "Running cargo fmt..."
+# Run all CI checks locally
+ci:
+  @echo "Running full CI suite..."
   just fmt
-  @echo "Running cargo clippy with automatic fixes on potentially dirty code..."
+  just clippy
+  just test
+
+# Lint and fix (convenience)
+lint:
+  @echo "Formatting..."
+  just fmt-fix
+  @echo "Running clippy fix..."
   just clippy-fix
-  @echo "Running cargo clippy..."
+  @echo "Running clippy check..."
   just clippy
