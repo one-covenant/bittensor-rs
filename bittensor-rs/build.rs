@@ -34,7 +34,7 @@ fn main() {
 
     if use_bundled {
         println!("cargo:warning=Using bundled metadata (docs.rs or offline mode)");
-        generate_from_bundled(&bundled_metadata_path, &code_path, &hash_path);
+        generate_from_bundled(bundled_metadata_path, &code_path, &hash_path);
         return;
     }
 
@@ -61,7 +61,7 @@ fn main() {
             // Fall back to bundled metadata
             if bundled_metadata_path.exists() {
                 println!("cargo:warning=Falling back to bundled metadata");
-                generate_from_bundled(&bundled_metadata_path, &code_path, &hash_path);
+                generate_from_bundled(bundled_metadata_path, &code_path, &hash_path);
                 return;
             }
             
