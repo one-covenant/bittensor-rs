@@ -10,44 +10,44 @@ pub mod colors {
     use ratatui::style::Color;
 
     // Primary palette - Electric/Lightning theme
-    pub const LIGHTNING: Color = Color::Rgb(0, 255, 255);      // #00ffff - Electric cyan
-    pub const LIGHTNING_DIM: Color = Color::Rgb(0, 180, 180);  // Dimmed cyan
-    pub const PLASMA: Color = Color::Rgb(255, 0, 255);         // #ff00ff - Hot magenta
-    pub const PLASMA_DIM: Color = Color::Rgb(180, 0, 180);     // Dimmed magenta
-    pub const VOLT: Color = Color::Rgb(255, 230, 0);           // #ffe600 - Electric yellow
-    pub const VOLT_DIM: Color = Color::Rgb(180, 160, 0);       // Dimmed yellow
+    pub const LIGHTNING: Color = Color::Rgb(0, 255, 255); // #00ffff - Electric cyan
+    pub const LIGHTNING_DIM: Color = Color::Rgb(0, 180, 180); // Dimmed cyan
+    pub const PLASMA: Color = Color::Rgb(255, 0, 255); // #ff00ff - Hot magenta
+    pub const PLASMA_DIM: Color = Color::Rgb(180, 0, 180); // Dimmed magenta
+    pub const VOLT: Color = Color::Rgb(255, 230, 0); // #ffe600 - Electric yellow
+    pub const VOLT_DIM: Color = Color::Rgb(180, 160, 0); // Dimmed yellow
 
     // Background gradient colors
-    pub const BG_DEEP: Color = Color::Rgb(10, 10, 20);         // #0a0a14 - Deep space
-    pub const BG_PANEL: Color = Color::Rgb(20, 20, 35);        // #141423 - Panel bg
-    pub const BG_HIGHLIGHT: Color = Color::Rgb(30, 30, 50);    // #1e1e32 - Highlight bg
-    pub const BG_SELECTED: Color = Color::Rgb(40, 40, 70);     // #282846 - Selected row
+    pub const BG_DEEP: Color = Color::Rgb(10, 10, 20); // #0a0a14 - Deep space
+    pub const BG_PANEL: Color = Color::Rgb(20, 20, 35); // #141423 - Panel bg
+    pub const BG_HIGHLIGHT: Color = Color::Rgb(30, 30, 50); // #1e1e32 - Highlight bg
+    pub const BG_SELECTED: Color = Color::Rgb(40, 40, 70); // #282846 - Selected row
 
     // Semantic colors
-    pub const SUCCESS: Color = Color::Rgb(0, 255, 136);        // #00ff88 - Neon green
-    pub const WARNING: Color = Color::Rgb(255, 170, 0);        // #ffaa00 - Amber
-    pub const ERROR: Color = Color::Rgb(255, 60, 100);         // #ff3c64 - Hot pink/red
-    pub const INFO: Color = Color::Rgb(100, 200, 255);         // #64c8ff - Sky blue
+    pub const SUCCESS: Color = Color::Rgb(0, 255, 136); // #00ff88 - Neon green
+    pub const WARNING: Color = Color::Rgb(255, 170, 0); // #ffaa00 - Amber
+    pub const ERROR: Color = Color::Rgb(255, 60, 100); // #ff3c64 - Hot pink/red
+    pub const INFO: Color = Color::Rgb(100, 200, 255); // #64c8ff - Sky blue
 
     // Text hierarchy
     pub const TEXT_PRIMARY: Color = Color::Rgb(240, 240, 250); // #f0f0fa - Bright white
     pub const TEXT_SECONDARY: Color = Color::Rgb(160, 160, 180); // #a0a0b4 - Muted
     pub const TEXT_TERTIARY: Color = Color::Rgb(100, 100, 120); // #646478 - Dim
-    pub const TEXT_ACCENT: Color = Color::Rgb(180, 140, 255);  // #b48cff - Purple accent
+    pub const TEXT_ACCENT: Color = Color::Rgb(180, 140, 255); // #b48cff - Purple accent
 
     // Data visualization
-    pub const STAKE_HIGH: Color = Color::Rgb(0, 255, 200);     // #00ffc8 - Teal
-    pub const STAKE_MED: Color = Color::Rgb(100, 200, 150);    // #64c896
-    pub const STAKE_LOW: Color = Color::Rgb(80, 120, 100);     // #507864
-    pub const EMISSION_HOT: Color = Color::Rgb(255, 100, 50);  // #ff6432 - Orange
-    pub const EMISSION_WARM: Color = Color::Rgb(255, 180, 100);// #ffb464
-    pub const EMISSION_COOL: Color = Color::Rgb(150, 150, 180);// #9696b4
+    pub const STAKE_HIGH: Color = Color::Rgb(0, 255, 200); // #00ffc8 - Teal
+    pub const STAKE_MED: Color = Color::Rgb(100, 200, 150); // #64c896
+    pub const STAKE_LOW: Color = Color::Rgb(80, 120, 100); // #507864
+    pub const EMISSION_HOT: Color = Color::Rgb(255, 100, 50); // #ff6432 - Orange
+    pub const EMISSION_WARM: Color = Color::Rgb(255, 180, 100); // #ffb464
+    pub const EMISSION_COOL: Color = Color::Rgb(150, 150, 180); // #9696b4
 
     // Network/TAO specific
-    pub const TAO: Color = Color::Rgb(255, 215, 0);            // #ffd700 - Gold (TAO)
-    pub const ALPHA: Color = Color::Rgb(200, 100, 255);        // #c864ff - Purple (Alpha tokens)
-    pub const VALIDATOR: Color = Color::Rgb(100, 255, 200);    // #64ffc8 - Validator green
-    pub const MINER: Color = Color::Rgb(255, 200, 100);        // #ffc864 - Miner amber
+    pub const TAO: Color = Color::Rgb(255, 215, 0); // #ffd700 - Gold (TAO)
+    pub const ALPHA: Color = Color::Rgb(200, 100, 255); // #c864ff - Purple (Alpha tokens)
+    pub const VALIDATOR: Color = Color::Rgb(100, 255, 200); // #64ffc8 - Validator green
+    pub const MINER: Color = Color::Rgb(255, 200, 100); // #ffc864 - Miner amber
 }
 
 /// Pre-built styles for consistent UI
@@ -112,8 +112,7 @@ pub mod styles {
     }
 
     pub fn highlighted() -> Style {
-        Style::default()
-            .bg(colors::BG_HIGHLIGHT)
+        Style::default().bg(colors::BG_HIGHLIGHT)
     }
 
     pub fn focused() -> Style {
@@ -249,18 +248,18 @@ pub mod sparkline {
     /// Generate a sparkline for the last N values with color hints
     pub fn trend_indicator(current: f64, previous: f64) -> (&'static str, bool) {
         if current > previous * 1.05 {
-            ("▲", true)  // Up, positive
+            ("▲", true) // Up, positive
         } else if current < previous * 0.95 {
             ("▼", false) // Down, negative
         } else {
-            ("─", true)  // Stable
+            ("─", true) // Stable
         }
     }
 }
 
 /// Gradient bar generation
 pub mod gradient {
-    use super::symbols::{BLOCK_FULL, BLOCK_HEAVY, BLOCK_MED, BLOCK_LIGHT};
+    use super::symbols::{BLOCK_FULL, BLOCK_HEAVY, BLOCK_LIGHT, BLOCK_MED};
 
     /// Generate a gradient progress bar
     pub fn progress_bar(percent: f64, width: usize) -> String {
@@ -288,7 +287,11 @@ pub mod gradient {
 
     /// Generate a heat bar (cold to hot colors represented by density)
     pub fn heat_bar(value: f64, max: f64, width: usize) -> String {
-        let percent = if max > 0.0 { (value / max) * 100.0 } else { 0.0 };
+        let percent = if max > 0.0 {
+            (value / max) * 100.0
+        } else {
+            0.0
+        };
         progress_bar(percent, width)
     }
 }
@@ -306,10 +309,7 @@ pub mod banners {
         let total_width = title.len() + (padding * 2) + 4;
         let line = "─".repeat(total_width - 2);
 
-        format!(
-            "╭{}╮\n│  {}  │\n╰{}╯",
-            line, title, line
-        )
+        format!("╭{}╮\n│  {}  │\n╰{}╯", line, title, line)
     }
 
     /// Inline section marker
@@ -351,6 +351,6 @@ pub fn format_address(addr: &str, len: usize) -> String {
     if addr.len() <= len * 2 + 3 {
         addr.to_string()
     } else {
-        format!("{}…{}", &addr[..len], &addr[addr.len()-len..])
+        format!("{}…{}", &addr[..len], &addr[addr.len() - len..])
     }
 }

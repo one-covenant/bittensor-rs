@@ -50,4 +50,3 @@ pub async fn run(ctx: AppContext) -> Result<()> {
 
     Ok(())
 }
-

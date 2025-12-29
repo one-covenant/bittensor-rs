@@ -29,10 +29,7 @@ fn main() {
     if env::var("BITTENSOR_OFFLINE").is_ok() {
         println!("cargo:warning=BITTENSOR_OFFLINE set, skipping metadata fetch");
         if !code_path.exists() {
-            panic!(
-                "Offline mode but no cached code exists at {:?}",
-                code_path
-            );
+            panic!("Offline mode but no cached code exists at {:?}", code_path);
         }
         return;
     }

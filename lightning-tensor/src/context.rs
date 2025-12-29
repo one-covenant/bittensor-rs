@@ -5,8 +5,8 @@
 
 use crate::config::Config;
 use crate::errors::{Error, Result};
-use bittensor_rs::Service;
 use bittensor_rs::wallet::Wallet;
+use bittensor_rs::Service;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -108,17 +108,13 @@ impl AppContext {
         let wallet_name = self
             .config
             .wallet
-            .default_wallet
-            .as_ref()
-            .map(|s| s.as_str())
+            .default_wallet.as_deref()
             .unwrap_or("default");
 
         let hotkey_name = self
             .config
             .wallet
-            .default_hotkey
-            .as_ref()
-            .map(|s| s.as_str())
+            .default_hotkey.as_deref()
             .unwrap_or("default");
 
         let netuid = self.config.wallet.default_netuid;
@@ -149,7 +145,7 @@ impl AppContext {
     pub async fn load_wallet(&self, name: &str) -> Result<Wallet> {
         self.load_wallet_with_hotkey(name, "default").await
     }
-    
+
     /// Load a wallet by name with specific hotkey
     pub async fn load_wallet_with_hotkey(&self, name: &str, hotkey: &str) -> Result<Wallet> {
         let wallet_path = self.wallet_dir.join(name);
@@ -161,7 +157,7 @@ impl AppContext {
         }
 
         let wallet = Wallet::load_from_path(name, hotkey, &self.wallet_dir)
-            .map_err(|e| Error::wallet(&format!("Failed to load wallet: {}", e)))?;
+            .map_err(|e| Error::wallet(format!("Failed to load wallet: {}", e)))?;
         *self.wallet.write().await = Some(wallet.clone());
 
         Ok(wallet)
@@ -292,4 +288,3 @@ mod tests {
         assert_eq!(ctx.config.wallet.default_netuid, 18);
     }
 }
-

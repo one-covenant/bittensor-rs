@@ -102,7 +102,7 @@ impl AnimationState {
         let pos = self.frame % width;
 
         for i in 0..width {
-            let dist = ((i as i32 - pos as i32).abs()) as usize;
+            let dist = (i as i32 - pos as i32).unsigned_abs() as usize;
             if dist == 0 {
                 bar.push('█');
             } else if dist == 1 {
@@ -133,9 +133,9 @@ impl AnimationState {
 
         for i in 0..width {
             if i == actual_pos {
-                bar.push_str("⚡");
+                bar.push('⚡');
             } else {
-                bar.push_str("·");
+                bar.push('·');
             }
         }
 
@@ -167,11 +167,20 @@ impl AnimationState {
         vec![
             format!("     {}{pulse}{}{pulse}{}     ", node, node, node),
             "    ╱ ╲ ╱ ╲ ╱ ╲    ".to_string(),
-            format!("   {}{pulse}{}{pulse}{}{pulse}{}   ", node, node, node, node),
+            format!(
+                "   {}{pulse}{}{pulse}{}{pulse}{}   ",
+                node, node, node, node
+            ),
             "  ╱ ╲ ╱ ╲ ╱ ╲ ╱ ╲  ".to_string(),
-            format!(" {}{pulse}{}{pulse}{}{pulse}{}{pulse}{} ", node, node, node, node, node),
+            format!(
+                " {}{pulse}{}{pulse}{}{pulse}{}{pulse}{} ",
+                node, node, node, node, node
+            ),
             "  ╲ ╱ ╲ ╱ ╲ ╱ ╲ ╱  ".to_string(),
-            format!("   {}{pulse}{}{pulse}{}{pulse}{}   ", node, node, node, node),
+            format!(
+                "   {}{pulse}{}{pulse}{}{pulse}{}   ",
+                node, node, node, node
+            ),
             "    ╲ ╱ ╲ ╱ ╲ ╱    ".to_string(),
             format!("     {}{pulse}{}{pulse}{}     ", node, node, node),
         ]

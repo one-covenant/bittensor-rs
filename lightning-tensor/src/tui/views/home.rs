@@ -121,31 +121,45 @@ fn draw_menu(f: &mut Frame, app: &App, area: Rect) {
             ),
             Span::raw("  "),
             Span::styled(conn_icon, Style::default().fg(conn_color)),
-            Span::styled(
-                format!(" {}", conn_text),
-                Style::default().fg(conn_color),
-            ),
+            Span::styled(format!(" {}", conn_text), Style::default().fg(conn_color)),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled(
-                format!("{}──────────────────────────────────{}", symbols::DIAMOND, symbols::DIAMOND),
-                Style::default().fg(colors::TEXT_TERTIARY),
+        Line::from(vec![Span::styled(
+            format!(
+                "{}──────────────────────────────────{}",
+                symbols::DIAMOND,
+                symbols::DIAMOND
             ),
-        ]),
+            Style::default().fg(colors::TEXT_TERTIARY),
+        )]),
         Line::from(""),
         // Navigation row 1
         Line::from(vec![
             Span::styled(" [ ", Style::default().fg(colors::TEXT_TERTIARY)),
-            Span::styled("w", Style::default().fg(colors::VOLT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "w",
+                Style::default()
+                    .fg(colors::VOLT)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" ] ", Style::default().fg(colors::TEXT_TERTIARY)),
             Span::styled("Wallet", Style::default().fg(colors::TEXT_PRIMARY)),
             Span::styled("     [ ", Style::default().fg(colors::TEXT_TERTIARY)),
-            Span::styled("s", Style::default().fg(colors::VOLT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "s",
+                Style::default()
+                    .fg(colors::VOLT)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" ] ", Style::default().fg(colors::TEXT_TERTIARY)),
             Span::styled("Stake", Style::default().fg(colors::TEXT_PRIMARY)),
             Span::styled("     [ ", Style::default().fg(colors::TEXT_TERTIARY)),
-            Span::styled("n", Style::default().fg(colors::VOLT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "n",
+                Style::default()
+                    .fg(colors::VOLT)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" ] ", Style::default().fg(colors::TEXT_TERTIARY)),
             Span::styled("Subnets", Style::default().fg(colors::TEXT_PRIMARY)),
         ]),
@@ -153,15 +167,30 @@ fn draw_menu(f: &mut Frame, app: &App, area: Rect) {
         // Navigation row 2
         Line::from(vec![
             Span::styled(" [ ", Style::default().fg(colors::TEXT_TERTIARY)),
-            Span::styled("m", Style::default().fg(colors::VOLT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "m",
+                Style::default()
+                    .fg(colors::VOLT)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" ] ", Style::default().fg(colors::TEXT_TERTIARY)),
             Span::styled("Metagraph", Style::default().fg(colors::TEXT_PRIMARY)),
             Span::styled("   [ ", Style::default().fg(colors::TEXT_TERTIARY)),
-            Span::styled("t", Style::default().fg(colors::VOLT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "t",
+                Style::default()
+                    .fg(colors::VOLT)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" ] ", Style::default().fg(colors::TEXT_TERTIARY)),
             Span::styled("Transfer", Style::default().fg(colors::TEXT_PRIMARY)),
             Span::styled("  [ ", Style::default().fg(colors::TEXT_TERTIARY)),
-            Span::styled("g", Style::default().fg(colors::VOLT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "g",
+                Style::default()
+                    .fg(colors::VOLT)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" ] ", Style::default().fg(colors::TEXT_TERTIARY)),
             Span::styled("Weights", Style::default().fg(colors::TEXT_PRIMARY)),
         ]),
@@ -169,15 +198,30 @@ fn draw_menu(f: &mut Frame, app: &App, area: Rect) {
         // Navigation row 3
         Line::from(vec![
             Span::styled(" [ ", Style::default().fg(colors::TEXT_TERTIARY)),
-            Span::styled("c", Style::default().fg(colors::LIGHTNING).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "c",
+                Style::default()
+                    .fg(colors::LIGHTNING)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" ] ", Style::default().fg(colors::TEXT_TERTIARY)),
             Span::styled("Connect", Style::default().fg(colors::LIGHTNING)),
             Span::styled("    [ ", Style::default().fg(colors::TEXT_TERTIARY)),
-            Span::styled("r", Style::default().fg(colors::TAO).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "r",
+                Style::default()
+                    .fg(colors::TAO)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" ] ", Style::default().fg(colors::TEXT_TERTIARY)),
             Span::styled("Root", Style::default().fg(colors::TAO)),
             Span::styled("      [ ", Style::default().fg(colors::TEXT_TERTIARY)),
-            Span::styled("q", Style::default().fg(colors::ERROR).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "q",
+                Style::default()
+                    .fg(colors::ERROR)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" ] ", Style::default().fg(colors::TEXT_TERTIARY)),
             Span::styled("Quit", Style::default().fg(colors::ERROR)),
         ]),
@@ -228,7 +272,10 @@ fn draw_messages(f: &mut Frame, app: &App, area: Rect) {
                         Style::default().fg(colors::TEXT_SECONDARY)
                     };
                     Line::from(vec![
-                        Span::styled(format!(" {} ", symbols::CHEVRON_RIGHT), Style::default().fg(colors::TEXT_TERTIARY)),
+                        Span::styled(
+                            format!(" {} ", symbols::CHEVRON_RIGHT),
+                            Style::default().fg(colors::TEXT_TERTIARY),
+                        ),
                         Span::styled(msg.clone(), style),
                     ])
                 })

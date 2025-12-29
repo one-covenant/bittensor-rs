@@ -27,4 +27,3 @@ pub mod tui;
 pub use config::Config;
 pub use context::AppContext;
 pub use errors::{Error, Result};
-

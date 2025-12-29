@@ -115,7 +115,10 @@ fn draw_empty_state(f: &mut Frame, app: &App, area: Rect) {
                     format!("{} ", app.animation_state.spinner_char()),
                     Style::default().fg(colors::LIGHTNING),
                 ),
-                Span::styled(&app.loading_message, Style::default().fg(colors::TEXT_SECONDARY)),
+                Span::styled(
+                    &app.loading_message,
+                    Style::default().fg(colors::TEXT_SECONDARY),
+                ),
             ]),
         ]
     } else {
@@ -228,8 +231,12 @@ fn draw_subnet_table(f: &mut Frame, app: &mut App, area: Rect) {
             Cell::from(format!("{:.4} {}", subnet.price_tao, symbols::TAO)).style(price_style),
             Cell::from(format!("{} {:>5.1}%", emission_bar, emission_pct))
                 .style(Style::default().fg(emission_style)),
-            Cell::from(format!("{} {}", format_compact(alpha_in_tao), subnet.symbol))
-                .style(Style::default().fg(colors::ALPHA)),
+            Cell::from(format!(
+                "{} {}",
+                format_compact(alpha_in_tao),
+                subnet.symbol
+            ))
+            .style(Style::default().fg(colors::ALPHA)),
             Cell::from(format!("{} {}", format_compact(tao_in_tao), symbols::TAO))
                 .style(Style::default().fg(colors::TAO)),
         ];

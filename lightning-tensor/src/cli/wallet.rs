@@ -2,11 +2,11 @@
 //!
 //! Command-line interface for wallet operations.
 
-use clap::Subcommand;
+use super::OutputFormat;
 use crate::context::AppContext;
 use crate::errors::Result;
 use crate::services::wallet::WalletService;
-use super::OutputFormat;
+use clap::Subcommand;
 use std::path::Path;
 
 /// Read coldkey address from coldkeypub.txt file
@@ -38,73 +38,73 @@ pub enum WalletCommand {
     Create {
         /// Wallet name
         name: String,
-        
+
         /// Number of mnemonic words (12 or 24)
         #[arg(short, long, default_value = "12")]
         words: u8,
-        
+
         /// Skip password prompt (insecure)
         #[arg(long)]
         no_password: bool,
     },
-    
+
     /// List all wallets
     List,
-    
+
     /// Show wallet balance
     Balance {
         /// Wallet name (uses default if not specified)
         name: Option<String>,
     },
-    
+
     /// Show wallet details
     Info {
         /// Wallet name
         name: String,
     },
-    
+
     /// Sign a message
     Sign {
         /// Message to sign
         message: String,
-        
+
         /// Wallet name (uses default if not specified)
         #[arg(short, long)]
         wallet: Option<String>,
     },
-    
+
     /// Verify a signature
     Verify {
         /// Original message
         message: String,
-        
+
         /// Signature in hex format
         signature: String,
-        
+
         /// Public key or address
         #[arg(short, long)]
         pubkey: Option<String>,
     },
-    
+
     /// Regenerate wallet from mnemonic
     Regen {
         /// Wallet name
         name: String,
-        
+
         /// Mnemonic phrase (will prompt if not provided)
         #[arg(short, long)]
         mnemonic: Option<String>,
     },
-    
+
     /// Create a new hotkey
     NewHotkey {
         /// Wallet name
         wallet: String,
-        
+
         /// Hotkey name
         name: String,
     },
-    
+
     /// List hotkeys for a wallet
     ListHotkeys {
         /// Wallet name
@@ -115,35 +115,33 @@ pub enum WalletCommand {
 /// Execute wallet command
 pub async fn execute(ctx: &AppContext, cmd: WalletCommand, format: OutputFormat) -> Result<()> {
     let service = WalletService::new(ctx.wallet_dir().clone());
-    
+
     match cmd {
-        WalletCommand::Create { name, words, no_password } => {
-            create_wallet(&service, &name, words, no_password, format).await
-        }
-        WalletCommand::List => {
-            list_wallets(&service, format).await
-        }
+        WalletCommand::Create {
+            name,
+            words,
+            no_password,
+        } => create_wallet(&service, &name, words, no_password, format).await,
+        WalletCommand::List => list_wallets(&service, format).await,
         WalletCommand::Balance { name } => {
             show_balance(ctx, &service, name.as_deref(), format).await
         }
-        WalletCommand::Info { name } => {
-            show_wallet_info(&service, &name, format).await
-        }
+        WalletCommand::Info { name } => show_wallet_info(&service, &name, format).await,
         WalletCommand::Sign { message, wallet } => {
             sign_message(&service, &message, wallet.as_deref(), format).await
         }
-        WalletCommand::Verify { message, signature, pubkey } => {
-            verify_signature(&service, &message, &signature, pubkey.as_deref(), format).await
-        }
+        WalletCommand::Verify {
+            message,
+            signature,
+            pubkey,
+        } => verify_signature(&service, &message, &signature, pubkey.as_deref(), format).await,
         WalletCommand::Regen { name, mnemonic } => {
             regen_wallet(&service, &name, mnemonic.as_deref(), format).await
         }
         WalletCommand::NewHotkey { wallet, name } => {
             create_hotkey(&service, &wallet, &name, format).await
         }
-        WalletCommand::ListHotkeys { wallet } => {
-            list_hotkeys(&service, &wallet, format).await
-        }
+        WalletCommand::ListHotkeys { wallet } => list_hotkeys(&service, &wallet, format).await,
     }
 }
 
@@ -162,7 +160,7 @@ async fn create_wallet(
 
     let wallet = service.create_wallet(name, words, &password)?;
     let address = wallet.hotkey().to_string(); // Hotkey address (coldkey needs unlock)
-    
+
     match format {
         OutputFormat::Text => {
             println!("✓ Wallet '{}' created successfully", name);
@@ -177,13 +175,13 @@ async fn create_wallet(
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
-    
+
     Ok(())
 }
 
 async fn list_wallets(service: &WalletService, format: OutputFormat) -> Result<()> {
     let wallets = service.list_wallets()?;
-    
+
     match format {
         OutputFormat::Text => {
             if wallets.is_empty() {
@@ -202,7 +200,7 @@ async fn list_wallets(service: &WalletService, format: OutputFormat) -> Result<(
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
-    
+
     Ok(())
 }
 
@@ -219,7 +217,7 @@ async fn show_balance(
 
     let wallet = service.load_wallet(&wallet_name)?;
     let address = read_coldkey_address(&wallet.path);
-    
+
     // For balance, we need to connect to the network
     // For now, just show the address
     match format {
@@ -239,7 +237,7 @@ async fn show_balance(
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
-    
+
     Ok(())
 }
 
@@ -247,7 +245,7 @@ async fn show_wallet_info(service: &WalletService, name: &str, format: OutputFor
     let wallet = service.load_wallet(name)?;
     let coldkey = read_coldkey_address(&wallet.path);
     let hotkeys = service.list_hotkeys(name)?;
-    
+
     match format {
         OutputFormat::Text => {
             println!("Wallet: {}", name);
@@ -270,7 +268,7 @@ async fn show_wallet_info(service: &WalletService, name: &str, format: OutputFor
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
-    
+
     Ok(())
 }
 
@@ -282,9 +280,9 @@ async fn sign_message(
 ) -> Result<()> {
     let name = wallet_name.unwrap_or("default");
     let password = prompt_password("Enter wallet password: ")?;
-    
+
     let signature = service.sign_message(name, message, &password)?;
-    
+
     match format {
         OutputFormat::Text => {
             println!("Signature: {}", signature);
@@ -297,7 +295,7 @@ async fn sign_message(
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
-    
+
     Ok(())
 }
 
@@ -309,7 +307,7 @@ async fn verify_signature(
     format: OutputFormat,
 ) -> Result<()> {
     let valid = service.verify_signature(message, signature, pubkey)?;
-    
+
     match format {
         OutputFormat::Text => {
             if valid {
@@ -326,7 +324,7 @@ async fn verify_signature(
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
-    
+
     Ok(())
 }
 
@@ -340,12 +338,12 @@ async fn regen_wallet(
         Some(m) => m.to_string(),
         None => prompt_input("Enter mnemonic phrase: ")?,
     };
-    
+
     let password = prompt_password("Enter new wallet password: ")?;
-    
+
     let wallet = service.regen_wallet(name, &mnemonic, &password)?;
     let address = read_coldkey_address(&wallet.path);
-    
+
     match format {
         OutputFormat::Text => {
             println!("✓ Wallet '{}' regenerated successfully", name);
@@ -360,7 +358,7 @@ async fn regen_wallet(
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
-    
+
     Ok(())
 }
 
@@ -371,9 +369,9 @@ async fn create_hotkey(
     format: OutputFormat,
 ) -> Result<()> {
     let password = prompt_password("Enter wallet password: ")?;
-    
+
     let address = service.create_hotkey(wallet, name, &password)?;
-    
+
     match format {
         OutputFormat::Text => {
             println!("✓ Hotkey '{}' created for wallet '{}'", name, wallet);
@@ -389,13 +387,13 @@ async fn create_hotkey(
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
-    
+
     Ok(())
 }
 
 async fn list_hotkeys(service: &WalletService, wallet: &str, format: OutputFormat) -> Result<()> {
     let hotkeys = service.list_hotkeys(wallet)?;
-    
+
     match format {
         OutputFormat::Text => {
             if hotkeys.is_empty() {
@@ -415,7 +413,7 @@ async fn list_hotkeys(service: &WalletService, wallet: &str, format: OutputForma
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
-    
+
     Ok(())
 }
 

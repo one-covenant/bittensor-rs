@@ -19,10 +19,10 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(5),  // Header with subnet info
-            Constraint::Min(10),    // Weight visualization
-            Constraint::Length(6),  // Weight input form
-            Constraint::Length(2),  // Footer
+            Constraint::Length(5), // Header with subnet info
+            Constraint::Min(10),   // Weight visualization
+            Constraint::Length(6), // Weight input form
+            Constraint::Length(2), // Footer
         ])
         .split(area);
 
@@ -72,10 +72,7 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
                     format!("{} ", symbols::WARNING),
                     Style::default().fg(colors::WARNING),
                 ),
-                Span::styled(
-                    "No wallet selected",
-                    Style::default().fg(colors::WARNING),
-                ),
+                Span::styled("No wallet selected", Style::default().fg(colors::WARNING)),
             ]),
             Line::from(""),
             Line::from(vec![Span::styled(
@@ -131,11 +128,7 @@ fn draw_weight_visualization(f: &mut Frame, app: &App, area: Rect) {
 
     // Show top neurons with visual weight bars
     let display_count = (inner_area.height as usize).saturating_sub(2).min(10);
-    let top_neurons: Vec<_> = app
-        .metagraph_neurons
-        .iter()
-        .take(display_count)
-        .collect();
+    let top_neurons: Vec<_> = app.metagraph_neurons.iter().take(display_count).collect();
 
     let mut lines = Vec::new();
     lines.push(Line::from(""));
@@ -146,7 +139,12 @@ fn draw_weight_visualization(f: &mut Frame, app: &App, area: Rect) {
         let bar = GradientProgress::new(weight_pct, 20).render();
 
         let role_indicator = if neuron.is_validator {
-            Span::styled("V", Style::default().fg(colors::VALIDATOR).add_modifier(Modifier::BOLD))
+            Span::styled(
+                "V",
+                Style::default()
+                    .fg(colors::VALIDATOR)
+                    .add_modifier(Modifier::BOLD),
+            )
         } else {
             Span::styled("M", Style::default().fg(colors::MINER))
         };
@@ -167,10 +165,7 @@ fn draw_weight_visualization(f: &mut Frame, app: &App, area: Rect) {
                 Style::default().fg(colors::TEXT_SECONDARY),
             ),
             Span::raw("  "),
-            Span::styled(
-                &neuron.hotkey,
-                Style::default().fg(colors::TEXT_TERTIARY),
-            ),
+            Span::styled(&neuron.hotkey, Style::default().fg(colors::TEXT_TERTIARY)),
         ]));
     }
 

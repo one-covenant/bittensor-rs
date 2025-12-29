@@ -45,15 +45,9 @@ impl<'a> Spinner<'a> {
 
     pub fn render(&self, f: &mut Frame, area: Rect) {
         let (spinner_text, color) = match self.style {
-            SpinnerStyle::Braille => (
-                self.animation.spinner_char().to_string(),
-                colors::LIGHTNING,
-            ),
+            SpinnerStyle::Braille => (self.animation.spinner_char().to_string(), colors::LIGHTNING),
             SpinnerStyle::Dots => (self.animation.spinner_dots().to_string(), colors::PLASMA),
-            SpinnerStyle::Lightning => (
-                self.animation.lightning_pulse().to_string(),
-                colors::VOLT,
-            ),
+            SpinnerStyle::Lightning => (self.animation.lightning_pulse().to_string(), colors::VOLT),
             SpinnerStyle::Bouncing => (self.animation.bouncing_loader(8), colors::LIGHTNING),
         };
 
@@ -120,7 +114,10 @@ impl<'a> LoadingIndicator<'a> {
 
         (
             Span::styled(icon.to_string(), Style::default().fg(color)),
-            Span::styled(format!(" {}", text), Style::default().fg(colors::TEXT_SECONDARY)),
+            Span::styled(
+                format!(" {}", text),
+                Style::default().fg(colors::TEXT_SECONDARY),
+            ),
         )
     }
 }

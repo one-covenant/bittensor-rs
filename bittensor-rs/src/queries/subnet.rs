@@ -351,22 +351,26 @@ pub async fn subnet_exists(
 pub async fn get_all_dynamic_info(
     client: &OnlineClient<PolkadotConfig>,
 ) -> Result<Vec<DynamicSubnetInfo>, BittensorError> {
-    let runtime_api = client.runtime_api().at_latest().await.map_err(|e| {
-        BittensorError::RpcError {
-            message: format!("Failed to get runtime API: {}", e),
-        }
-    })?;
+    let runtime_api =
+        client
+            .runtime_api()
+            .at_latest()
+            .await
+            .map_err(|e| BittensorError::RpcError {
+                message: format!("Failed to get runtime API: {}", e),
+            })?;
 
     let payload = api::apis().subnet_info_runtime_api().get_all_dynamic_info();
-    let result = runtime_api.call(payload).await.map_err(|e| {
-        BittensorError::RpcError {
+    let result = runtime_api
+        .call(payload)
+        .await
+        .map_err(|e| BittensorError::RpcError {
             message: format!("Failed to call get_all_dynamic_info: {}", e),
-        }
-    })?;
+        })?;
 
     let subnets: Vec<DynamicSubnetInfo> = result
         .into_iter()
-        .filter_map(|opt| opt)
+        .flatten()
         .map(|info| {
             // Decode subnet name from compact bytes
             let name = decode_compact_bytes(&info.subnet_name);
@@ -378,7 +382,11 @@ pub async fn get_all_dynamic_info(
                 .as_ref()
                 .and_then(|id| {
                     let n = String::from_utf8_lossy(&id.subnet_name).to_string();
-                    if n.is_empty() { None } else { Some(n) }
+                    if n.is_empty() {
+                        None
+                    } else {
+                        Some(n)
+                    }
                 })
                 .unwrap_or_else(|| name.clone());
 
@@ -386,7 +394,7 @@ pub async fn get_all_dynamic_info(
             // This is the actual exchange rate (how much TAO per 1 Alpha)
             let alpha_in_f = info.alpha_in as f64 / 1_000_000_000.0; // Convert RAO to TAO
             let tao_in_f = info.tao_in as f64 / 1_000_000_000.0;
-            
+
             let price_tao = if info.netuid == 0 {
                 1.0 // Root subnet always 1:1
             } else if alpha_in_f > 0.0 {
@@ -402,8 +410,16 @@ pub async fn get_all_dynamic_info(
 
             DynamicSubnetInfo {
                 netuid: info.netuid,
-                name: if display_name.is_empty() { format!("SN{}", info.netuid) } else { display_name },
-                symbol: if symbol.is_empty() { "α".to_string() } else { symbol },
+                name: if display_name.is_empty() {
+                    format!("SN{}", info.netuid)
+                } else {
+                    display_name
+                },
+                symbol: if symbol.is_empty() {
+                    "α".to_string()
+                } else {
+                    symbol
+                },
                 tao_in_emission: info.tao_in_emission,
                 moving_price,
                 price_tao,
@@ -426,7 +442,6 @@ fn decode_compact_bytes(bytes: &[codec::Compact<u8>]) -> String {
     let raw: Vec<u8> = bytes.iter().map(|c| c.0).collect();
     String::from_utf8_lossy(&raw).to_string()
 }
-
 
 #[cfg(test)]
 mod tests {

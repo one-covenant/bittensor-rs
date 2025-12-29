@@ -169,7 +169,11 @@ impl StyledCell {
     /// Create a cell with validator/miner indicator
     pub fn role(is_validator: bool) -> Cell<'static> {
         if is_validator {
-            Cell::from("V").style(Style::default().fg(colors::VALIDATOR).add_modifier(Modifier::BOLD))
+            Cell::from("V").style(
+                Style::default()
+                    .fg(colors::VALIDATOR)
+                    .add_modifier(Modifier::BOLD),
+            )
         } else {
             Cell::from("M").style(Style::default().fg(colors::MINER))
         }

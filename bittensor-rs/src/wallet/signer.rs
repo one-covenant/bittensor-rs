@@ -36,15 +36,15 @@ impl WalletSigner {
         // Get the seed bytes from the pair by converting to raw bytes
         // The secret key is the first 64 bytes (32 bytes key + 32 bytes nonce)
         let seed = pair.to_raw_vec();
-        let keypair = Keypair::from_secret_key(seed[..32].try_into().unwrap())
-            .expect("Valid 32-byte seed");
+        let keypair =
+            Keypair::from_secret_key(seed[..32].try_into().unwrap()).expect("Valid 32-byte seed");
         Self { inner: keypair }
     }
 
     /// Create a signer from a seed phrase (mnemonic or hex seed)
     pub fn from_seed(seed: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         use subxt_signer::SecretUri;
-        
+
         let uri: SecretUri = seed.parse()?;
         let keypair = Keypair::from_uri(&uri)?;
         Ok(Self { inner: keypair })
@@ -68,7 +68,6 @@ impl std::fmt::Debug for WalletSigner {
             .finish()
     }
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -16,10 +16,7 @@ use ratatui::{
 pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(35),
-            Constraint::Percentage(65),
-        ])
+        .constraints([Constraint::Percentage(35), Constraint::Percentage(65)])
         .split(area);
 
     // Draw stake summary
@@ -56,60 +53,78 @@ fn draw_stake_summary(f: &mut Frame, app: &App, area: Rect) {
             Span::styled(balance, Style::default().fg(colors::TAO)),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled(
-                format!("{}─────────────────────────────────{}", symbols::DIAMOND, symbols::DIAMOND),
-                Style::default().fg(colors::TEXT_TERTIARY),
+        Line::from(vec![Span::styled(
+            format!(
+                "{}─────────────────────────────────{}",
+                symbols::DIAMOND,
+                symbols::DIAMOND
             ),
-        ]),
+            Style::default().fg(colors::TEXT_TERTIARY),
+        )]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled(
-                "  Actions:",
-                Style::default()
-                    .fg(colors::TEXT_PRIMARY)
-                    .add_modifier(Modifier::BOLD),
-            ),
-        ]),
+        Line::from(vec![Span::styled(
+            "  Actions:",
+            Style::default()
+                .fg(colors::TEXT_PRIMARY)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(""),
         Line::from(vec![
             Span::styled("    [ ", Style::default().fg(colors::TEXT_TERTIARY)),
-            Span::styled("a", Style::default().fg(colors::SUCCESS).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "a",
+                Style::default()
+                    .fg(colors::SUCCESS)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" ] ", Style::default().fg(colors::TEXT_TERTIARY)),
             Span::styled("Add stake", Style::default().fg(colors::TEXT_PRIMARY)),
             Span::styled("      [ ", Style::default().fg(colors::TEXT_TERTIARY)),
-            Span::styled("r", Style::default().fg(colors::ERROR).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "r",
+                Style::default()
+                    .fg(colors::ERROR)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" ] ", Style::default().fg(colors::TEXT_TERTIARY)),
             Span::styled("Remove stake", Style::default().fg(colors::TEXT_PRIMARY)),
         ]),
         Line::from(""),
         Line::from(vec![
             Span::styled("    [ ", Style::default().fg(colors::TEXT_TERTIARY)),
-            Span::styled("l", Style::default().fg(colors::LIGHTNING).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "l",
+                Style::default()
+                    .fg(colors::LIGHTNING)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" ] ", Style::default().fg(colors::TEXT_TERTIARY)),
             Span::styled("List positions", Style::default().fg(colors::TEXT_PRIMARY)),
             Span::styled("   [ ", Style::default().fg(colors::TEXT_TERTIARY)),
-            Span::styled("m", Style::default().fg(colors::PLASMA).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "m",
+                Style::default()
+                    .fg(colors::PLASMA)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" ] ", Style::default().fg(colors::TEXT_TERTIARY)),
             Span::styled("Move stake", Style::default().fg(colors::TEXT_PRIMARY)),
         ]),
     ];
 
-    let summary = Paragraph::new(content)
-        .wrap(Wrap { trim: true })
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(ratatui::widgets::BorderType::Rounded)
-                .border_style(Style::default().fg(colors::TEXT_TERTIARY))
-                .title(Span::styled(
-                    format!(" {} Stake Management ", symbols::LIGHTNING),
-                    Style::default()
-                        .fg(colors::VOLT)
-                        .add_modifier(Modifier::BOLD),
-                ))
-                .style(Style::default().bg(colors::BG_PANEL)),
-        );
+    let summary = Paragraph::new(content).wrap(Wrap { trim: true }).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(ratatui::widgets::BorderType::Rounded)
+            .border_style(Style::default().fg(colors::TEXT_TERTIARY))
+            .title(Span::styled(
+                format!(" {} Stake Management ", symbols::LIGHTNING),
+                Style::default()
+                    .fg(colors::VOLT)
+                    .add_modifier(Modifier::BOLD),
+            ))
+            .style(Style::default().bg(colors::BG_PANEL)),
+    );
 
     f.render_widget(summary, area);
 }
@@ -131,7 +146,10 @@ fn draw_stake_positions(f: &mut Frame, app: &App, area: Rect) {
                         format!("  {} ", app.animation_state.spinner_char()),
                         Style::default().fg(colors::LIGHTNING),
                     ),
-                    Span::styled("Loading stake positions...", Style::default().fg(colors::TEXT_SECONDARY)),
+                    Span::styled(
+                        "Loading stake positions...",
+                        Style::default().fg(colors::TEXT_SECONDARY),
+                    ),
                 ]),
             ]
         } else {
@@ -156,29 +174,42 @@ fn draw_stake_positions(f: &mut Frame, app: &App, area: Rect) {
         let mut lines = vec![
             Line::from(""),
             Line::from(vec![
-                Span::styled("  Total Staked: ", Style::default().fg(colors::TEXT_SECONDARY)),
+                Span::styled(
+                    "  Total Staked: ",
+                    Style::default().fg(colors::TEXT_SECONDARY),
+                ),
                 Span::styled(
                     format!("{:.4} {}", total_stake, symbols::ALPHA),
-                    Style::default().fg(colors::ALPHA).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(colors::ALPHA)
+                        .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled("    Emission: ", Style::default().fg(colors::TEXT_SECONDARY)),
+                Span::styled(
+                    "    Emission: ",
+                    Style::default().fg(colors::TEXT_SECONDARY),
+                ),
                 Span::styled(
                     format!("{:.6} {}/day", total_emission * 7200.0, symbols::TAO),
                     Style::default().fg(colors::SUCCESS),
                 ),
             ]),
             Line::from(""),
-            Line::from(vec![
-                Span::styled(
-                    format!("  {}─────────────────────────────────────────────────{}", symbols::DIAMOND, symbols::DIAMOND),
-                    Style::default().fg(colors::TEXT_TERTIARY),
+            Line::from(vec![Span::styled(
+                format!(
+                    "  {}─────────────────────────────────────────────────{}",
+                    symbols::DIAMOND,
+                    symbols::DIAMOND
                 ),
-            ]),
+                Style::default().fg(colors::TEXT_TERTIARY),
+            )]),
             Line::from(""),
             Line::from(vec![
                 Span::styled("  ", Style::default()),
                 Span::styled(
-                    format!("{:<8} {:<14} {:>14} {:>14}", "Subnet", "Hotkey", "Stake", "Emission"),
+                    format!(
+                        "{:<8} {:<14} {:>14} {:>14}",
+                        "Subnet", "Hotkey", "Stake", "Emission"
+                    ),
                     Style::default()
                         .fg(colors::VOLT)
                         .add_modifier(Modifier::BOLD),
@@ -226,21 +257,19 @@ fn draw_stake_positions(f: &mut Frame, app: &App, area: Rect) {
         lines
     };
 
-    let positions = Paragraph::new(content)
-        .wrap(Wrap { trim: true })
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(ratatui::widgets::BorderType::Rounded)
-                .border_style(Style::default().fg(colors::TEXT_TERTIARY))
-                .title(Span::styled(
-                    format!(" {} Stake Positions ", symbols::ALPHA),
-                    Style::default()
-                        .fg(colors::ALPHA)
-                        .add_modifier(Modifier::BOLD),
-                ))
-                .style(Style::default().bg(colors::BG_DEEP)),
-        );
+    let positions = Paragraph::new(content).wrap(Wrap { trim: true }).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(ratatui::widgets::BorderType::Rounded)
+            .border_style(Style::default().fg(colors::TEXT_TERTIARY))
+            .title(Span::styled(
+                format!(" {} Stake Positions ", symbols::ALPHA),
+                Style::default()
+                    .fg(colors::ALPHA)
+                    .add_modifier(Modifier::BOLD),
+            ))
+            .style(Style::default().bg(colors::BG_DEEP)),
+    );
 
     f.render_widget(positions, area);
 }

@@ -137,7 +137,9 @@ fn draw_wallet_details(f: &mut Frame, app: &App, area: Rect) {
                     Span::styled("  Balance: ", Style::default().fg(colors::TEXT_SECONDARY)),
                     Span::styled(
                         balance,
-                        Style::default().fg(colors::TAO).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(colors::TAO)
+                            .add_modifier(Modifier::BOLD),
                     ),
                 ]),
                 Line::from(vec![
@@ -197,7 +199,10 @@ fn draw_wallet_details(f: &mut Frame, app: &App, area: Rect) {
         Span::styled("b ", Style::default().fg(colors::VOLT)),
         Span::styled("Balance  ", Style::default().fg(colors::TEXT_SECONDARY)),
         Span::styled("B ", Style::default().fg(colors::VOLT)),
-        Span::styled("All Balances  ", Style::default().fg(colors::TEXT_SECONDARY)),
+        Span::styled(
+            "All Balances  ",
+            Style::default().fg(colors::TEXT_SECONDARY),
+        ),
         Span::styled("Esc ", Style::default().fg(colors::VOLT)),
         Span::styled("Back", Style::default().fg(colors::TEXT_SECONDARY)),
     ]);
@@ -247,15 +252,13 @@ fn draw_stakes_table(f: &mut Frame, app: &App, area: Rect) {
     // Calculate total stake
     let total_stake: f64 = stakes.iter().map(|s| s.stake_tao).sum();
 
-    let header_cells = ["Subnet", "Hotkey", "Stake", "Emission"]
-        .iter()
-        .map(|h| {
-            Cell::from(*h).style(
-                Style::default()
-                    .fg(colors::VOLT)
-                    .add_modifier(Modifier::BOLD),
-            )
-        });
+    let header_cells = ["Subnet", "Hotkey", "Stake", "Emission"].iter().map(|h| {
+        Cell::from(*h).style(
+            Style::default()
+                .fg(colors::VOLT)
+                .add_modifier(Modifier::BOLD),
+        )
+    });
     let header = Row::new(header_cells)
         .style(Style::default().bg(colors::BG_HIGHLIGHT))
         .height(1);

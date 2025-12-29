@@ -2,10 +2,10 @@
 //!
 //! Command-line interface for staking operations.
 
-use clap::Subcommand;
+use super::OutputFormat;
 use crate::context::AppContext;
 use crate::errors::Result;
-use super::OutputFormat;
+use clap::Subcommand;
 
 /// Staking subcommands
 #[derive(Subcommand, Debug)]
@@ -14,67 +14,67 @@ pub enum StakeCommand {
     Add {
         /// Hotkey address or name
         hotkey: String,
-        
+
         /// Amount in TAO
         amount: f64,
-        
+
         /// Subnet netuid (uses default if not specified)
         #[arg(short, long)]
         netuid: Option<u16>,
     },
-    
+
     /// Remove stake from a hotkey
     Remove {
         /// Hotkey address or name
         hotkey: String,
-        
+
         /// Amount in TAO
         amount: f64,
-        
+
         /// Subnet netuid
         #[arg(short, long)]
         netuid: Option<u16>,
     },
-    
+
     /// List all stake positions
     List {
         /// Coldkey address (uses wallet if not specified)
         #[arg(short, long)]
         coldkey: Option<String>,
     },
-    
+
     /// Delegate stake to a validator
     Delegate {
         /// Validator hotkey address
         validator: String,
-        
+
         /// Amount in TAO
         amount: f64,
-        
+
         /// Subnet netuid
         #[arg(short, long)]
         netuid: Option<u16>,
     },
-    
+
     /// Undelegate stake from a validator
     Undelegate {
         /// Validator hotkey address
         validator: String,
-        
+
         /// Amount in TAO
         amount: f64,
-        
+
         /// Subnet netuid
         #[arg(short, long)]
         netuid: Option<u16>,
     },
-    
+
     /// Set children hotkeys
     Children {
         #[command(subcommand)]
         action: ChildrenAction,
     },
-    
+
     /// Show stake summary
     Summary,
 }
@@ -86,35 +86,35 @@ pub enum ChildrenAction {
     Set {
         /// Child hotkey addresses (comma-separated)
         children: String,
-        
+
         /// Proportions for each child (comma-separated, must sum to 1.0)
         #[arg(short, long)]
         proportions: String,
-        
+
         /// Subnet netuid
         #[arg(short, long)]
         netuid: Option<u16>,
     },
-    
+
     /// List current children hotkeys
     List {
         /// Hotkey to check
         #[arg(short, long)]
         hotkey: Option<String>,
     },
-    
+
     /// Revoke all children hotkeys
     Revoke {
         /// Subnet netuid
         #[arg(short, long)]
         netuid: Option<u16>,
     },
-    
+
     /// Set childkey take percentage
     SetTake {
         /// Take percentage (0.0 to 1.0)
         take: f64,
-        
+
         /// Subnet netuid
         #[arg(short, long)]
         netuid: Option<u16>,
@@ -124,27 +124,29 @@ pub enum ChildrenAction {
 /// Execute stake command
 pub async fn execute(ctx: &AppContext, cmd: StakeCommand, format: OutputFormat) -> Result<()> {
     match cmd {
-        StakeCommand::Add { hotkey, amount, netuid } => {
-            add_stake(ctx, &hotkey, amount, netuid, format).await
-        }
-        StakeCommand::Remove { hotkey, amount, netuid } => {
-            remove_stake(ctx, &hotkey, amount, netuid, format).await
-        }
-        StakeCommand::List { coldkey } => {
-            list_stakes(ctx, coldkey.as_deref(), format).await
-        }
-        StakeCommand::Delegate { validator, amount, netuid } => {
-            delegate_stake(ctx, &validator, amount, netuid, format).await
-        }
-        StakeCommand::Undelegate { validator, amount, netuid } => {
-            undelegate_stake(ctx, &validator, amount, netuid, format).await
-        }
-        StakeCommand::Children { action } => {
-            handle_children(ctx, action, format).await
-        }
-        StakeCommand::Summary => {
-            show_summary(ctx, format).await
-        }
+        StakeCommand::Add {
+            hotkey,
+            amount,
+            netuid,
+        } => add_stake(ctx, &hotkey, amount, netuid, format).await,
+        StakeCommand::Remove {
+            hotkey,
+            amount,
+            netuid,
+        } => remove_stake(ctx, &hotkey, amount, netuid, format).await,
+        StakeCommand::List { coldkey } => list_stakes(ctx, coldkey.as_deref(), format).await,
+        StakeCommand::Delegate {
+            validator,
+            amount,
+            netuid,
+        } => delegate_stake(ctx, &validator, amount, netuid, format).await,
+        StakeCommand::Undelegate {
+            validator,
+            amount,
+            netuid,
+        } => undelegate_stake(ctx, &validator, amount, netuid, format).await,
+        StakeCommand::Children { action } => handle_children(ctx, action, format).await,
+        StakeCommand::Summary => show_summary(ctx, format).await,
     }
 }
 
@@ -157,11 +159,14 @@ async fn add_stake(
 ) -> Result<()> {
     // TODO: Implement when bittensor-rs exposes staking through Service
     let netuid = netuid.unwrap_or(1);
-    
+
     match format {
         OutputFormat::Text => {
             println!("⚠️  Staking operations require network connection");
-            println!("  Would stake {} TAO to {} on subnet {}", amount, hotkey, netuid);
+            println!(
+                "  Would stake {} TAO to {} on subnet {}",
+                amount, hotkey, netuid
+            );
             println!("  Use 'lt tui' for interactive staking");
         }
         OutputFormat::Json => {
@@ -174,7 +179,7 @@ async fn add_stake(
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
-    
+
     Ok(())
 }
 
@@ -186,11 +191,14 @@ async fn remove_stake(
     format: OutputFormat,
 ) -> Result<()> {
     let netuid = netuid.unwrap_or(1);
-    
+
     match format {
         OutputFormat::Text => {
             println!("⚠️  Staking operations require network connection");
-            println!("  Would unstake {} TAO from {} on subnet {}", amount, hotkey, netuid);
+            println!(
+                "  Would unstake {} TAO from {} on subnet {}",
+                amount, hotkey, netuid
+            );
         }
         OutputFormat::Json => {
             let output = serde_json::json!({
@@ -202,15 +210,11 @@ async fn remove_stake(
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
-    
+
     Ok(())
 }
 
-async fn list_stakes(
-    _ctx: &AppContext,
-    coldkey: Option<&str>,
-    format: OutputFormat,
-) -> Result<()> {
+async fn list_stakes(_ctx: &AppContext, coldkey: Option<&str>, format: OutputFormat) -> Result<()> {
     match format {
         OutputFormat::Text => {
             println!("⚠️  Stake listing requires network connection");
@@ -226,7 +230,7 @@ async fn list_stakes(
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
-    
+
     Ok(())
 }
 
@@ -259,9 +263,15 @@ async fn handle_children(
         OutputFormat::Text => {
             println!("⚠️  Children operations require network connection");
             match action {
-                ChildrenAction::Set { children, proportions, netuid } => {
-                    println!("  Would set children: {} with proportions: {} on subnet {:?}", 
-                        children, proportions, netuid);
+                ChildrenAction::Set {
+                    children,
+                    proportions,
+                    netuid,
+                } => {
+                    println!(
+                        "  Would set children: {} with proportions: {} on subnet {:?}",
+                        children, proportions, netuid
+                    );
                 }
                 ChildrenAction::List { hotkey } => {
                     println!("  Would list children for hotkey: {:?}", hotkey);
@@ -270,7 +280,11 @@ async fn handle_children(
                     println!("  Would revoke children on subnet {:?}", netuid);
                 }
                 ChildrenAction::SetTake { take, netuid } => {
-                    println!("  Would set childkey take to {:.2}% on subnet {:?}", take * 100.0, netuid);
+                    println!(
+                        "  Would set childkey take to {:.2}% on subnet {:?}",
+                        take * 100.0,
+                        netuid
+                    );
                 }
             }
         }
@@ -281,7 +295,7 @@ async fn handle_children(
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
-    
+
     Ok(())
 }
 
@@ -297,6 +311,6 @@ async fn show_summary(_ctx: &AppContext, format: OutputFormat) -> Result<()> {
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
-    
+
     Ok(())
 }

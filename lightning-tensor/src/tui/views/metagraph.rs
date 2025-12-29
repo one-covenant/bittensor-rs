@@ -8,7 +8,10 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Margin, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, Table},
+    widgets::{
+        Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
+        Table,
+    },
     Frame,
 };
 
@@ -106,7 +109,10 @@ fn draw_table(f: &mut Frame, app: &mut App, area: Rect) {
                         format!("{} ", app.animation_state.spinner_char()),
                         Style::default().fg(colors::LIGHTNING),
                     ),
-                    Span::styled(&app.loading_message, Style::default().fg(colors::TEXT_SECONDARY)),
+                    Span::styled(
+                        &app.loading_message,
+                        Style::default().fg(colors::TEXT_SECONDARY),
+                    ),
                 ]),
             ]
         } else {
@@ -189,10 +195,14 @@ fn draw_table(f: &mut Frame, app: &mut App, area: Rect) {
             };
 
             let cells = vec![
-                Cell::from(format!("{:>4}", neuron.uid)).style(Style::default().fg(colors::LIGHTNING)),
-                Cell::from(role_icon).style(Style::default().fg(role_color).add_modifier(Modifier::BOLD)),
-                Cell::from(truncate_key(&neuron.hotkey)).style(Style::default().fg(colors::TEXT_ACCENT)),
-                Cell::from(truncate_key(&neuron.coldkey)).style(Style::default().fg(colors::TEXT_SECONDARY)),
+                Cell::from(format!("{:>4}", neuron.uid))
+                    .style(Style::default().fg(colors::LIGHTNING)),
+                Cell::from(role_icon)
+                    .style(Style::default().fg(role_color).add_modifier(Modifier::BOLD)),
+                Cell::from(truncate_key(&neuron.hotkey))
+                    .style(Style::default().fg(colors::TEXT_ACCENT)),
+                Cell::from(truncate_key(&neuron.coldkey))
+                    .style(Style::default().fg(colors::TEXT_SECONDARY)),
                 Cell::from(format!("{:>10.2}", neuron.stake)).style(stake_style),
                 Cell::from(if neuron.ip.is_empty() {
                     symbols::DISCONNECTED.to_string()
@@ -229,7 +239,11 @@ fn draw_table(f: &mut Frame, app: &mut App, area: Rect) {
                 .border_type(ratatui::widgets::BorderType::Rounded)
                 .border_style(Style::default().fg(colors::TEXT_TERTIARY))
                 .title(Span::styled(
-                    format!(" {} Metagraph - Subnet {} ", symbols::LIGHTNING, app.current_netuid),
+                    format!(
+                        " {} Metagraph - Subnet {} ",
+                        symbols::LIGHTNING,
+                        app.current_netuid
+                    ),
                     Style::default()
                         .fg(colors::VOLT)
                         .add_modifier(Modifier::BOLD),

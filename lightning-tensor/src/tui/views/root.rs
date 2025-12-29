@@ -19,10 +19,10 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(5),  // Header with root info
-            Constraint::Min(10),    // Subnet hierarchy visualization
-            Constraint::Length(6),  // Registration panel
-            Constraint::Length(2),  // Footer
+            Constraint::Length(5), // Header with root info
+            Constraint::Min(10),   // Subnet hierarchy visualization
+            Constraint::Length(6), // Registration panel
+            Constraint::Length(2), // Footer
         ])
         .split(area);
 
@@ -53,10 +53,7 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
                     .fg(colors::TAO)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(
-                " (Subnet 0)",
-                Style::default().fg(colors::TEXT_SECONDARY),
-            ),
+            Span::styled(" (Subnet 0)", Style::default().fg(colors::TEXT_SECONDARY)),
         ]),
         Line::from(""),
         Line::from(vec![
@@ -68,15 +65,21 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
                     .add_modifier(Modifier::BOLD),
             ),
             Span::raw("  │  "),
-            Span::styled("Total TAO Staked: ", Style::default().fg(colors::TEXT_SECONDARY)),
+            Span::styled(
+                "Total TAO Staked: ",
+                Style::default().fg(colors::TEXT_SECONDARY),
+            ),
             Span::styled(
                 format!("{:.2}K {}", total_stake / 1000.0, symbols::TAO),
                 Style::default().fg(colors::TAO),
             ),
             Span::raw("  │  "),
-            Span::styled("Root Validators: ", Style::default().fg(colors::TEXT_SECONDARY)),
             Span::styled(
-                "64",  // Placeholder - would come from root metagraph
+                "Root Validators: ",
+                Style::default().fg(colors::TEXT_SECONDARY),
+            ),
+            Span::styled(
+                "64", // Placeholder - would come from root metagraph
                 Style::default().fg(colors::VALIDATOR),
             ),
         ]),
@@ -286,7 +289,10 @@ fn draw_footer(f: &mut Frame, area: Rect) {
         Span::styled("r ", Style::default().fg(colors::VOLT)),
         Span::styled("Register  ", Style::default().fg(colors::TEXT_SECONDARY)),
         Span::styled("v ", Style::default().fg(colors::VOLT)),
-        Span::styled("View Validators  ", Style::default().fg(colors::TEXT_SECONDARY)),
+        Span::styled(
+            "View Validators  ",
+            Style::default().fg(colors::TEXT_SECONDARY),
+        ),
         Span::styled("F5 ", Style::default().fg(colors::VOLT)),
         Span::styled("Refresh  ", Style::default().fg(colors::TEXT_SECONDARY)),
         Span::styled("Esc ", Style::default().fg(colors::VOLT)),

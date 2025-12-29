@@ -164,10 +164,7 @@ impl<'a> Popup<'a> {
                         Style::default().fg(colors::TEXT_SECONDARY)
                     };
 
-                    vec![
-                        Span::styled(format!(" {} ", btn), style),
-                        Span::raw("  "),
-                    ]
+                    vec![Span::styled(format!(" {} ", btn), style), Span::raw("  ")]
                 })
                 .collect();
 

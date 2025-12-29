@@ -19,7 +19,7 @@ pub fn truncate_address(address: &str, prefix_len: usize, suffix_len: usize) -> 
     if address.len() <= prefix_len + suffix_len + 3 {
         return address.to_string();
     }
-    
+
     format!(
         "{}...{}",
         &address[..prefix_len],
@@ -42,14 +42,14 @@ pub fn format_blocks(blocks: u64) -> String {
     let s = blocks.to_string();
     let mut result = String::new();
     let chars: Vec<char> = s.chars().rev().collect();
-    
+
     for (i, c) in chars.iter().enumerate() {
         if i > 0 && i % 3 == 0 {
             result.push(',');
         }
         result.push(*c);
     }
-    
+
     result.chars().rev().collect()
 }
 
@@ -76,4 +76,3 @@ mod tests {
         assert_eq!(format_normalized(32767), "0.5000");
     }
 }
-

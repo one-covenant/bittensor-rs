@@ -18,10 +18,10 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(5),  // Header with balance
-            Constraint::Length(8),  // Transfer form
-            Constraint::Min(5),     // Recent transfers / status
-            Constraint::Length(2),  // Footer
+            Constraint::Length(5), // Header with balance
+            Constraint::Length(8), // Transfer form
+            Constraint::Min(5),    // Recent transfers / status
+            Constraint::Length(2), // Footer
         ])
         .split(area);
 
@@ -71,10 +71,7 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
                     format!("{} ", symbols::WARNING),
                     Style::default().fg(colors::WARNING),
                 ),
-                Span::styled(
-                    "No wallet selected",
-                    Style::default().fg(colors::WARNING),
-                ),
+                Span::styled("No wallet selected", Style::default().fg(colors::WARNING)),
             ]),
             Line::from(""),
             Line::from(vec![Span::styled(
@@ -201,7 +198,10 @@ fn draw_status_panel(f: &mut Frame, app: &App, area: Rect) {
     let content = vec![
         Line::from(""),
         Line::from(vec![
-            Span::styled("  Network Fee: ", Style::default().fg(colors::TEXT_SECONDARY)),
+            Span::styled(
+                "  Network Fee: ",
+                Style::default().fg(colors::TEXT_SECONDARY),
+            ),
             Span::styled(
                 format!("~0.0001 {}", symbols::TAO),
                 Style::default().fg(colors::TEXT_TERTIARY),

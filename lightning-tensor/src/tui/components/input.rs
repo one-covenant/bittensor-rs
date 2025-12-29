@@ -99,7 +99,9 @@ impl<'a> InputField<'a> {
                 .border_type(ratatui::widgets::BorderType::Rounded)
                 .title(Span::styled(
                     title,
-                    Style::default().fg(colors::VOLT).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(colors::VOLT)
+                        .add_modifier(Modifier::BOLD),
                 ))
                 .style(Style::default().bg(colors::BG_PANEL)),
         );
