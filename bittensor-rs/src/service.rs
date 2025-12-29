@@ -105,7 +105,7 @@ fn load_key_seed(path: &PathBuf) -> Result<String, Box<dyn std::error::Error>> {
 
 fn signer_from_seed(seed: &str) -> Result<Keypair, Box<dyn std::error::Error + Send + Sync>> {
     use subxt_signer::SecretUri;
-    
+
     // Parse the seed as a SecretUri (handles mnemonic, hex seeds, etc.)
     let uri: SecretUri = seed.parse()?;
     let keypair = Keypair::from_uri(&uri)?;

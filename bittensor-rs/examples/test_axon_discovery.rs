@@ -133,7 +133,9 @@ async fn test_direct_extrinsic(
             }
 
             // Build storage query for Axons(netuid, hotkey)
-            let storage_query = api::storage().subtensor_module().axons(NETUID, hotkey.clone());
+            let storage_query = api::storage()
+                .subtensor_module()
+                .axons(NETUID, hotkey.clone());
 
             // Query the storage
             match client

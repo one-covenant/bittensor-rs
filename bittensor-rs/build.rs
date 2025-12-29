@@ -51,20 +51,20 @@ fn main() {
         Ok(bytes) => bytes,
         Err(e) => {
             println!("cargo:warning=Failed to fetch metadata: {}", e);
-            
+
             // If we have cached code in OUT_DIR, use it
             if code_path.exists() {
                 println!("cargo:warning=Using cached generated code");
                 return;
             }
-            
+
             // Fall back to bundled metadata
             if bundled_metadata_path.exists() {
                 println!("cargo:warning=Falling back to bundled metadata");
                 generate_from_bundled(bundled_metadata_path, &code_path, &hash_path);
                 return;
             }
-            
+
             panic!("No cached code and failed to fetch metadata: {}", e);
         }
     };
@@ -73,14 +73,23 @@ fn main() {
 }
 
 fn generate_from_bundled(bundled_path: &Path, code_path: &Path, hash_path: &Path) {
-    let metadata_bytes = fs::read(bundled_path)
-        .unwrap_or_else(|e| panic!("Failed to read bundled metadata from {:?}: {}", bundled_path, e));
-    
+    let metadata_bytes = fs::read(bundled_path).unwrap_or_else(|e| {
+        panic!(
+            "Failed to read bundled metadata from {:?}: {}",
+            bundled_path, e
+        )
+    });
+
     // Generate code from bundled metadata
     generate_code(&metadata_bytes, code_path, hash_path);
 }
 
-fn generate_from_bytes(metadata_bytes: &[u8], metadata_path: &Path, code_path: &Path, hash_path: &Path) {
+fn generate_from_bytes(
+    metadata_bytes: &[u8],
+    metadata_path: &Path,
+    code_path: &Path,
+    hash_path: &Path,
+) {
     // Hash the metadata to detect changes
     let mut hasher = Sha256::new();
     hasher.update(metadata_bytes);
