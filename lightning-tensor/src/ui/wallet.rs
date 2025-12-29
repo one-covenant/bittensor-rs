@@ -6,10 +6,8 @@ use ratatui::{
     Frame,
 };
 
+use crate::wallet_compat::{Wallet, WalletError};
 use crate::App;
-// use bittensor_wallet::keypair::Keypair;
-use bittensor_wallet::Wallet;
-use bittensor_wallet::WalletError;
 
 /// Renders the wallet interface
 ///

@@ -1,6 +1,6 @@
 use crate::errors::AppError;
+use crate::wallet_compat::Wallet;
 use bittensor_rs::{BittensorConfig, Service, SubnetInfo};
-use bittensor_wallet::Wallet;
 use std::error::Error;
 
 use crate::ui::AnimationState;

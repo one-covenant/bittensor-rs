@@ -9,7 +9,7 @@ pub enum AppError {
     #[error("Bittensor error: {0}")]
     BittensorError(#[from] bittensor_rs::BittensorError),
     #[error("Wallet error: {0}")]
-    WalletError(#[from] bittensor_wallet::WalletError),
+    WalletError(#[from] crate::wallet_compat::WalletError),
     #[error("Configuration error: {0}")]
     ConfigError(String),
 }

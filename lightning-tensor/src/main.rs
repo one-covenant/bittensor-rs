@@ -6,6 +6,7 @@ mod app;
 pub mod errors;
 mod handlers;
 mod ui;
+pub mod wallet_compat;
 
 use errors::AppError;
 
