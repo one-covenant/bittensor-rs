@@ -71,7 +71,34 @@ async fn register_root(format: OutputFormat) -> Result<()> {
     Ok(())
 }
 
-async fn set_root_weights(netuids: &str, weights: &str, format: OutputFormat) -> Result<()> {
+async fn set_root_weights(
+    netuids: &str,
+    weights: &str,
+    format: OutputFormat,
+) -> Result<()> {
+    // Validate netuids are comma-separated integers
+    let netuid_vec: Result<Vec<u16>, _> = netuids
+        .split(',')
+        .map(|s| s.trim().parse())
+        .collect();
+    let netuid_vec = netuid_vec.map_err(|_| 
+        crate::errors::Error::config("Invalid netuid format: expected comma-separated integers"))?;
+    
+    // Validate weights are comma-separated floats
+    let weight_vec: Result<Vec<f64>, _> = weights
+        .split(',')
+        .map(|s| s.trim().parse())
+        .collect();
+    let weight_vec = weight_vec.map_err(|_| 
+        crate::errors::Error::config("Invalid weight format: expected comma-separated numbers"))?;
+    
+    // Validate counts match
+    if netuid_vec.len() != weight_vec.len() {
+        return Err(crate::errors::Error::config(
+            format!("Mismatch: {} netuids but {} weights", netuid_vec.len(), weight_vec.len())
+        ));
+    }
+
     match format {
         OutputFormat::Text => {
             println!("⚠️  Root weight setting requires network connection");
