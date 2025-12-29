@@ -1,9 +1,11 @@
 //! # TUI Module
 //!
 //! Terminal User Interface implementation using ratatui.
+//! Features a distinctive cyberpunk/lightning aesthetic.
 
 pub mod app;
 pub mod components;
+pub mod theme;
 pub mod views;
 
 use crate::context::AppContext;
