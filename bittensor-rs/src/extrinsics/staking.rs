@@ -29,6 +29,8 @@ pub struct StakeParams {
 impl StakeParams {
     /// Create new stake params with amount in TAO
     ///
+    /// Returns an error if the amount is negative.
+    ///
     /// # Example
     ///
     /// ```
@@ -38,15 +40,21 @@ impl StakeParams {
     ///     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
     ///     1,   // netuid
     ///     1.5  // TAO
-    /// );
+    /// ).unwrap();
     /// assert_eq!(params.amount_rao, 1_500_000_000);
     /// ```
-    pub fn new_tao(hotkey: &str, netuid: u16, amount_tao: f64) -> Self {
-        Self {
+    pub fn new_tao(hotkey: &str, netuid: u16, amount_tao: f64) -> Result<Self, BittensorError> {
+        if amount_tao < 0.0 {
+            return Err(BittensorError::ConfigError {
+                field: "amount_tao".to_string(),
+                message: format!("Stake amount cannot be negative: {}", amount_tao),
+            });
+        }
+        Ok(Self {
             hotkey: hotkey.to_string(),
             netuid,
             amount_rao: (amount_tao * 1_000_000_000.0) as u64,
-        }
+        })
     }
 
     /// Create new stake params with amount in RAO
@@ -74,21 +82,21 @@ impl StakeParams {
 /// An `ExtrinsicResponse` with the staking result
 ///
 /// # Example
-///
-/// ```rust,ignore
-/// use bittensor_rs::extrinsics::{add_stake, StakeParams};
-///
-/// async fn example(client: &subxt::OnlineClient<subxt::PolkadotConfig>, signer: &impl subxt::tx::Signer<subxt::PolkadotConfig>) -> Result<(), Box<dyn std::error::Error>> {
-///     let params = StakeParams::new_tao(
-///         "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
-///         1,    // netuid
-///         1.0   // TAO amount
-///     );
-///     let result = add_stake(client, signer, params).await?;
-///     Ok(())
-/// }
-/// ```
-pub async fn add_stake<S>(
+    ///
+    /// ```rust,ignore
+    /// use bittensor_rs::extrinsics::{add_stake, StakeParams};
+    ///
+    /// async fn example(client: &subxt::OnlineClient<subxt::PolkadotConfig>, signer: &impl subxt::tx::Signer<subxt::PolkadotConfig>) -> Result<(), Box<dyn std::error::Error>> {
+    ///     let params = StakeParams::new_tao(
+    ///         "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ///         1,    // netuid
+    ///         1.0   // TAO amount
+    ///     )?;
+    ///     let result = add_stake(client, signer, params).await?;
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn add_stake<S>(
     client: &OnlineClient<PolkadotConfig>,
     signer: &S,
     params: StakeParams,
@@ -222,9 +230,29 @@ mod tests {
     #[test]
     fn test_stake_params_tao() {
         let params =
-            StakeParams::new_tao("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", 1, 1.5);
+            StakeParams::new_tao("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", 1, 1.5)
+                .unwrap();
         assert_eq!(params.amount_rao, 1_500_000_000);
         assert_eq!(params.netuid, 1);
+    }
+
+    #[test]
+    fn test_stake_params_tao_zero_amount() {
+        // Zero amount should be allowed (no-op stake)
+        let params =
+            StakeParams::new_tao("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", 1, 0.0)
+                .unwrap();
+        assert_eq!(params.amount_rao, 0);
+    }
+
+    #[test]
+    fn test_stake_params_tao_negative_amount_rejected() {
+        // Negative amounts should be rejected to prevent u64 overflow
+        let result =
+            StakeParams::new_tao("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", 1, -1.0);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("cannot be negative"));
     }
 
     #[test]
