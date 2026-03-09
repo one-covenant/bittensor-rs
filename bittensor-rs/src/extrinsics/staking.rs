@@ -38,15 +38,20 @@ impl StakeParams {
     ///     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
     ///     1,   // netuid
     ///     1.5  // TAO
-    /// );
+    /// ).unwrap();
     /// assert_eq!(params.amount_rao, 1_500_000_000);
     /// ```
-    pub fn new_tao(hotkey: &str, netuid: u16, amount_tao: f64) -> Self {
-        Self {
+    pub fn new_tao(hotkey: &str, netuid: u16, amount_tao: f64) -> Result<Self, BittensorError> {
+        if amount_tao < 0.0 {
+            return Err(BittensorError::InvalidAmount {
+                reason: format!("TAO amount must be non-negative, got {}", amount_tao),
+            });
+        }
+        Ok(Self {
             hotkey: hotkey.to_string(),
             netuid,
             amount_rao: (amount_tao * 1_000_000_000.0) as u64,
-        }
+        })
     }
 
     /// Create new stake params with amount in RAO
@@ -83,7 +88,7 @@ impl StakeParams {
 ///         "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
 ///         1,    // netuid
 ///         1.0   // TAO amount
-///     );
+///     )?;
 ///     let result = add_stake(client, signer, params).await?;
 ///     Ok(())
 /// }
@@ -222,9 +227,17 @@ mod tests {
     #[test]
     fn test_stake_params_tao() {
         let params =
-            StakeParams::new_tao("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", 1, 1.5);
+            StakeParams::new_tao("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", 1, 1.5)
+                .unwrap();
         assert_eq!(params.amount_rao, 1_500_000_000);
         assert_eq!(params.netuid, 1);
+    }
+
+    #[test]
+    fn test_stake_params_negative_tao() {
+        let result =
+            StakeParams::new_tao("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", 1, -1.0);
+        assert!(result.is_err());
     }
 
     #[test]

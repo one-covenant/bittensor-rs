@@ -36,15 +36,20 @@ impl TransferParams {
     /// let params = TransferParams::new_tao(
     ///     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
     ///     1.5
-    /// );
+    /// ).unwrap();
     /// assert_eq!(params.amount_rao, 1_500_000_000);
     /// ```
-    pub fn new_tao(dest: &str, amount_tao: f64) -> Self {
-        Self {
+    pub fn new_tao(dest: &str, amount_tao: f64) -> Result<Self, BittensorError> {
+        if amount_tao < 0.0 {
+            return Err(BittensorError::InvalidAmount {
+                reason: format!("TAO amount must be non-negative, got {}", amount_tao),
+            });
+        }
+        Ok(Self {
             dest: dest.to_string(),
             amount_rao: (amount_tao * 1_000_000_000.0) as u64,
             keep_alive: true,
-        }
+        })
     }
 
     /// Create new transfer params with amount in RAO
@@ -84,7 +89,7 @@ impl TransferParams {
 ///     let params = TransferParams::new_tao(
 ///         "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
 ///         1.0
-///     );
+///     )?;
 ///     let result = transfer(client, signer, params).await?;
 ///     Ok(())
 /// }
@@ -218,9 +223,17 @@ mod tests {
     #[test]
     fn test_transfer_params_tao() {
         let params =
-            TransferParams::new_tao("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", 1.5);
+            TransferParams::new_tao("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", 1.5)
+                .unwrap();
         assert_eq!(params.amount_rao, 1_500_000_000);
         assert!(params.keep_alive);
+    }
+
+    #[test]
+    fn test_transfer_params_negative_tao() {
+        let result =
+            TransferParams::new_tao("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", -1.0);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -234,6 +247,7 @@ mod tests {
     fn test_transfer_params_builder() {
         let params =
             TransferParams::new_tao("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", 1.0)
+                .unwrap()
                 .keep_alive(false);
 
         assert!(!params.keep_alive);

@@ -148,6 +148,9 @@ pub enum BittensorError {
 
     #[error("Insufficient balance: {available} < {required}")]
     InsufficientBalance { available: u64, required: u64 },
+
+    #[error("Invalid amount: {reason}")]
+    InvalidAmount { reason: String },
 }
 
 /// Classification of errors for retry logic
@@ -443,7 +446,8 @@ impl BittensorError {
             | BittensorError::MaxRetriesExceeded { .. }
             | BittensorError::BackoffTimeoutReached { .. }
             | BittensorError::BlockNotFound { .. }
-            | BittensorError::InvalidBlockNumber { .. } => ErrorCategory::Permanent,
+            | BittensorError::InvalidBlockNumber { .. }
+            | BittensorError::InvalidAmount { .. } => ErrorCategory::Permanent,
 
             // Legacy errors - categorize based on content
             BittensorError::RpcError { message }
