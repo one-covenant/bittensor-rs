@@ -42,9 +42,9 @@ impl StakeParams {
     /// assert_eq!(params.amount_rao, 1_500_000_000);
     /// ```
     pub fn new_tao(hotkey: &str, netuid: u16, amount_tao: f64) -> Result<Self, BittensorError> {
-        if amount_tao < 0.0 {
+        if !amount_tao.is_finite() || amount_tao < 0.0 {
             return Err(BittensorError::InvalidAmount {
-                reason: format!("TAO amount must be non-negative, got {}", amount_tao),
+                reason: format!("TAO amount must be a non-negative finite number, got {}", amount_tao),
             });
         }
         Ok(Self {
@@ -237,6 +237,23 @@ mod tests {
     fn test_stake_params_negative_tao() {
         let result =
             StakeParams::new_tao("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", 1, -1.0);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stake_params_nan_tao() {
+        let result =
+            StakeParams::new_tao("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", 1, f64::NAN);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stake_params_infinity_tao() {
+        let result = StakeParams::new_tao(
+            "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+            1,
+            f64::INFINITY,
+        );
         assert!(result.is_err());
     }
 
