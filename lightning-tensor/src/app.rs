@@ -139,7 +139,12 @@ impl App {
     }
 
     /// Connect to the Bittensor network
-    pub async fn connect(&mut self, wallet_name: &str, hotkey_name: &str, netuid: u16) -> Result<(), AppError> {
+    pub async fn connect(
+        &mut self,
+        wallet_name: &str,
+        hotkey_name: &str,
+        netuid: u16,
+    ) -> Result<(), AppError> {
         let config = BittensorConfig::local(wallet_name, hotkey_name, netuid);
         let service = Service::new(config).await?;
         self.subtensor = Some(service);

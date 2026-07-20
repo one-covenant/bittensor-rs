@@ -11,7 +11,7 @@ use std::path::Path;
 
 use parity_scale_codec::Decode;
 use sha2::{Digest, Sha256};
-use subxt_codegen::CodegenBuilder;
+use subxt_codegen::{syn::parse_quote, CodegenBuilder};
 use subxt_metadata::Metadata;
 use subxt_utils_fetchmetadata::{from_url_blocking, MetadataVersion, Url};
 
@@ -125,8 +125,27 @@ fn generate_code(metadata_bytes: &[u8], code_path: &Path, hash_path: &Path) {
     // Decode metadata
     let metadata = Metadata::decode(&mut &metadata_bytes[..]).expect("Failed to decode metadata");
 
+    // Preserve the primitive client API for SCALE-compatible runtime newtypes.
+    let mut codegen = CodegenBuilder::new();
+    codegen.set_type_substitute(
+        parse_quote!(subtensor_runtime_common::NetUid),
+        parse_quote!(::core::primitive::u16),
+    );
+    codegen.set_type_substitute(
+        parse_quote!(subtensor_runtime_common::currency::TaoBalance),
+        parse_quote!(::core::primitive::u64),
+    );
+    codegen.set_type_substitute(
+        parse_quote!(subtensor_runtime_common::currency::AlphaBalance),
+        parse_quote!(::core::primitive::u64),
+    );
+    codegen.set_type_substitute(
+        parse_quote!(sp_arithmetic::per_things::PerU16),
+        parse_quote!(::core::primitive::u16),
+    );
+
     // Generate Rust code
-    let code = CodegenBuilder::new()
+    let code = codegen
         .generate(metadata)
         .expect("Failed to generate code from metadata");
 

@@ -28,9 +28,7 @@ pub async fn draw<'a>(f: &mut Frame<'a>, app: &mut App, area: ratatui::layout::R
         .map(|subnet| {
             ListItem::new(Line::from(format!(
                 "Subnet {}: {} neurons (max {})",
-                subnet.netuid,
-                subnet.n,
-                subnet.max_n
+                subnet.netuid, subnet.n, subnet.max_n
             )))
         })
         .collect();
