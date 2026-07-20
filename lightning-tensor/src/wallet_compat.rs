@@ -55,20 +55,24 @@ impl Wallet {
     }
 
     /// Create a new wallet with a generated keypair
-    pub fn create_new_wallet(&mut self, _word_count: u32, _password: &str) -> Result<(), WalletError> {
+    pub fn create_new_wallet(
+        &mut self,
+        _word_count: u32,
+        _password: &str,
+    ) -> Result<(), WalletError> {
         // Generate a random keypair (always 12 words for simplicity)
         let (pair, phrase, _) = Pair::generate_with_phrase(None);
-        
+
         self.keypair = Some(pair);
-        
+
         // Save mnemonic to wallet directory
         let wallet_dir = self.path.join(&self.name);
         std::fs::create_dir_all(&wallet_dir)?;
-        
+
         // Note: In production, this should be encrypted with the password
         let mnemonic_path = wallet_dir.join("mnemonic.txt");
         std::fs::write(mnemonic_path, phrase)?;
-        
+
         Ok(())
     }
 
@@ -99,11 +103,16 @@ impl Wallet {
     }
 
     /// Verify a signature
-    pub fn verify(&self, message: &[u8], signature: &[u8], _password: &str) -> Result<bool, WalletError> {
+    pub fn verify(
+        &self,
+        message: &[u8],
+        signature: &[u8],
+        _password: &str,
+    ) -> Result<bool, WalletError> {
         let sig: Signature = signature
             .try_into()
             .map_err(|_| WalletError::KeypairError("Invalid signature length".to_string()))?;
-        
+
         match &self.keypair {
             Some(pair) => Ok(Pair::verify(&sig, message, &pair.public())),
             None => Err(WalletError::NotFound("No keypair loaded".to_string())),
@@ -111,7 +120,11 @@ impl Wallet {
     }
 
     /// Change the wallet password (stub)
-    pub async fn change_password(&mut self, _old_password: &str, _new_password: &str) -> Result<(), WalletError> {
+    pub async fn change_password(
+        &mut self,
+        _old_password: &str,
+        _new_password: &str,
+    ) -> Result<(), WalletError> {
         // TODO: Implement actual password change with re-encryption
         Ok(())
     }
@@ -127,4 +140,3 @@ impl KeypairWrapper {
         Ok(self.0.sign(message))
     }
 }
-
